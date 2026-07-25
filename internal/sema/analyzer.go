@@ -42,7 +42,9 @@ func mangleFunctionName(fn *ast.FuncStmt) string {
 	var name strings.Builder
 	name.WriteString(fn.Name.Value)
 	for _, param := range fn.Params {
-		name.WriteString("__" + param.SynType.Value)
+		if param.SynType != nil {
+			name.WriteString("__" + param.SynType.Value)
+		}
 	}
 
 	return name.String()
@@ -351,6 +353,9 @@ func (a *Analyzer) registerTopLevelSymbols(program *ast.Program) {
 			})
 
 			for _, param := range n.Params {
+				if param.SynType == nil {
+					continue
+				}
 				paramType := a.lookupType(param.SynType.Value)
 				if paramType == nil {
 					a.errorf(param.SynType, "unknown parameter type: %s", param.SynType.Value)
