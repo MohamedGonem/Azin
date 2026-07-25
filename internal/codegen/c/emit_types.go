@@ -11,13 +11,13 @@ func (t *Transpiler) emitTypes(
 		switch n := stmt.(type) {
 
 		case *ast.StructStmt:
-			if _, ok := t.reachableTypes[n.Name.Value]; ok {
+			if _, ok := t.reachableTypes[n.SemaType]; ok {
 				t.emitStruct(n)
 				t.newline()
 			}
 
 		case *ast.EnumStmt:
-			if _, ok := t.reachableTypes[n.Name.Value]; ok {
+			if _, ok := t.reachableTypes[n.SemaType]; ok {
 				t.emitEnum(n)
 				t.newline()
 			}
@@ -39,7 +39,7 @@ func (t *Transpiler) emitStruct(
 	for _, field := range s.Fields {
 		t.indentLine()
 
-		typ := emitType(field.SynType.Value)
+		typ := emitType(field.SemaType)
 
 		// Convert to a pointer if it creates a cycle
 		if t.isCyclicField(s.Name.Value, field.SynType.Value) {

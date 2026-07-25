@@ -4,6 +4,7 @@ import (
 	"path/filepath"
 
 	"github.com/azin-lang/Azin/internal/ast"
+	"github.com/azin-lang/Azin/internal/types"
 )
 
 // registerVariable adds a local variable to the scope tracker initialized with zero usages.
@@ -27,21 +28,22 @@ func (a *Analyzer) useVariable(function, name string) {
 }
 
 // MarkTypeUsed resolves a struct or enum type and recursively marks all of its dependent types as used.
-func (a *Analyzer) MarkTypeUsed(name string) {
-	if name == "" {
+func (a *Analyzer) MarkTypeUsed(t *types.TypeInfo) {
+	if t == nil {
 		return
 	}
-	if _, ok := a.ReachableTypes[name]; ok {
+
+	if _, ok := a.ReachableTypes[t]; ok {
 		return // Break cyclic dependencies
 	}
 
-	a.ReachableTypes[name] = struct{}{}
+	a.ReachableTypes[t] = struct{}{}
 
-	if name == "bool" {
+	if t.IsBool() {
 		a.Transpiler.RequireInclude("stdbool.h")
 	}
 
-	for dep := range a.TypeDependencies[name] {
+	for dep := range a.TypeDependencies[t] {
 		a.MarkTypeUsed(dep)
 	}
 }

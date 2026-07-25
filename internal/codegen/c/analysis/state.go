@@ -1,6 +1,9 @@
 package analysis
 
-import "github.com/azin-lang/Azin/internal/ast"
+import (
+	"github.com/azin-lang/Azin/internal/ast"
+	"github.com/azin-lang/Azin/internal/types"
+)
 
 type FuncInfo struct {
 	Stmt  *ast.FuncStmt
@@ -17,8 +20,8 @@ type Analyzer struct {
 
 	Calls              map[string]map[string]struct{}
 	ReachableFunctions map[string]struct{}
-	TypeDependencies   map[string]map[string]struct{}
-	ReachableTypes     map[string]struct{}
+	TypeDependencies   map[*types.TypeInfo]map[*types.TypeInfo]struct{}
+	ReachableTypes     map[*types.TypeInfo]struct{}
 
 	Variables map[string]map[string]int
 }
@@ -40,8 +43,8 @@ func New(t Transpiler) *Analyzer {
 		Enums:              make(map[string]*ast.EnumStmt),
 		Calls:              make(map[string]map[string]struct{}),
 		ReachableFunctions: make(map[string]struct{}),
-		TypeDependencies:   make(map[string]map[string]struct{}),
-		ReachableTypes:     make(map[string]struct{}),
+		TypeDependencies:   make(map[*types.TypeInfo]map[*types.TypeInfo]struct{}),
+		ReachableTypes:     make(map[*types.TypeInfo]struct{}),
 		Variables:          make(map[string]map[string]int),
 	}
 }

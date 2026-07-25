@@ -23,8 +23,8 @@ func (t *Transpiler) emitFunction(
 	t.flushDefers()
 
 	if t.functionName(fn) == "main" &&
-		fn.SynReturnType != nil &&
-		emitType(fn.SynReturnType.Value) == "void" {
+		fn.SemaReturnType.IsComplete() &&
+		emitType(fn.SemaReturnType) == "void" {
 
 		t.indentLine()
 		t.write("return 0;\n")
@@ -40,15 +40,15 @@ func (t *Transpiler) emitFunctionSignature(
 ) {
 	name := t.functionName(fn)
 
-	if fn.SynReturnType == nil {
+	if !fn.SemaReturnType.IsComplete() {
 		t.printf("void %s(", name)
 		t.write("void")
-		t.write(") /* missing return type */")
+		t.write(") /* incomplete return type */")
 		return
 	}
 
 	ret := emitType(
-		fn.SynReturnType.Value,
+		fn.SemaReturnType,
 	)
 
 	if name == "main" &&
@@ -72,14 +72,14 @@ func (t *Transpiler) emitFunctionSignature(
 				t.write(", ")
 			}
 
-			if param.SynType == nil {
-				t.printf("void %s /* missing type */", param.Name.Value)
+			if !param.SemaType.IsComplete() {
+				t.printf("void %s /* incomplete type */", param.Name.Value)
 				continue
 			}
 
 			t.printf(
 				"%s %s",
-				emitType(param.SynType.Value),
+				emitType(param.SemaType),
 				param.Name.Value,
 			)
 		}

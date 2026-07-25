@@ -30,8 +30,8 @@ func (a *Analyzer) pruneBlock(fnName string, stmts []ast.Stmt, usage map[string]
 				}
 				out = append(out, stmt)
 
-				if s.SynType != nil {
-					a.MarkTypeUsed(s.SynType.Value)
+				if s.SemaType.IsNominal() {
+					a.MarkTypeUsed(s.SemaType)
 				}
 			}
 		case *ast.IfStmt:

@@ -44,7 +44,7 @@ func (t *Transpiler) emitStructDeclarations(program *ast.Program) {
 	for _, stmt := range program.Statements {
 		if s, ok := stmt.(*ast.StructStmt); ok {
 			name := s.Name.Value
-			if _, ok := t.reachableTypes[name]; ok {
+			if _, ok := t.reachableTypes[s.SemaType]; ok {
 				t.printf("typedef struct %s %s;\n", name, name)
 				hasStructs = true
 			}

@@ -8,13 +8,13 @@ func (a *Analyzer) RemoveUnusedTypes(program *ast.Program) {
 		switch n := stmt.(type) {
 		case *ast.StructStmt:
 			if n.Name != nil {
-				if _, ok := a.ReachableTypes[n.Name.Value]; !ok {
+				if _, ok := a.ReachableTypes[n.SemaType]; !ok {
 					continue // Prune dead struct
 				}
 			}
 		case *ast.EnumStmt:
 			if n.Name != nil {
-				if _, ok := a.ReachableTypes[n.Name.Value]; !ok {
+				if _, ok := a.ReachableTypes[n.SemaType]; !ok {
 					continue // Prune dead enum
 				}
 			}
