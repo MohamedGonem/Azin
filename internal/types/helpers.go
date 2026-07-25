@@ -10,6 +10,11 @@ func GetPrimitiveTypeByName(name string) *TypeInfo {
 
 /* Utility functions */
 
+// IsComplete checks if the TypeInfo represents a complete type (not unknown or error).
+func (t *TypeInfo) IsComplete() bool {
+	return t != nil && t.Kind != Unknown && t.Kind != Error
+}
+
 // IsUnknown checks if the TypeInfo represents an unknown type (needs type inference).
 func (t *TypeInfo) IsUnknown() bool {
 	return t != nil && t.Kind == Unknown
