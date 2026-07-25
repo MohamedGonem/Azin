@@ -1,6 +1,9 @@
 package sema
 
-import "github.com/azin-lang/Azin/internal/ast"
+import (
+	"github.com/azin-lang/Azin/internal/ast"
+	"github.com/azin-lang/Azin/internal/types"
+)
 
 // SymbolKind represents the kind of a symbol (variable, function, struct).
 type SymbolKind uint8
@@ -15,7 +18,7 @@ const (
 // Symbol represents a symbol in the sema analysis phase.
 type Symbol struct {
 	Name     string
-	Type     *ast.Identifier
+	Type     *types.TypeInfo
 	Kind     SymbolKind
 	Mutable  bool
 	Used     bool
