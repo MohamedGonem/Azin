@@ -1,0 +1,45 @@
+name: Linux
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main, dev ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build binary
+        run: go build -v -o azc ./cmd/azc
+
+      - name: Run tests
+        run: go test -v -race -count=1 -cover ./...
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: azc-linux
+          path: azc
+          retention-days: 7
