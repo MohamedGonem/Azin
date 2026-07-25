@@ -8,6 +8,7 @@ const (
 	Stdio  = "stdio.h"
 	Stdlib = "stdlib.h"
 	String = "string.h"
+	Math   = "math.h"
 )
 
 var Builtins = map[string]Builtin{
@@ -62,6 +63,15 @@ var Builtins = map[string]Builtin{
 	"strtok":  {String},
 	"memmove": {String},
 	"memcmp":  {String},
+
+	"sqrt":    {Math},
+	"pow":     {Math}, 
+	"sin":     {Math},
+	"cos":     {Math},
+	"floor":   {Math},
+	"ceil":    {Math},
+	"fabs":    {Math},
+
 }
 
 func LookupBuiltin(name string) (Builtin, bool) {
