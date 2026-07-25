@@ -124,6 +124,9 @@ type StructStmt struct {
 	Token  token.Token // struct
 	Name   *Identifier
 	Fields []*FieldDecl
+
+	// SemaType contains the type information for the struct, set after semantic analysis.
+	SemaType *types.TypeInfo
 }
 
 func (*StructStmt) stmtNode()              {}
@@ -137,6 +140,9 @@ type EnumStmt struct {
 	Token    token.Token // enum
 	Name     *Identifier
 	Variants []*Identifier
+
+	// SemaType contains the type information for the enum, set after semantic analysis.
+	SemaType *types.TypeInfo
 }
 
 func (*EnumStmt) stmtNode()              {}

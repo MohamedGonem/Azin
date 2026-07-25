@@ -303,12 +303,16 @@ func (a *Analyzer) registerTopLevelSymbols(program *ast.Program) {
 				Struct: n,
 			})
 
+			n.SemaType = types.NominalType(n.Name.Value)
+
 		case *ast.EnumStmt:
 			a.declare(&Symbol{
 				Name: n.Name.Value,
 				Kind: SymbolEnum,
 				Enum: n,
 			})
+
+			n.SemaType = types.NominalType(n.Name.Value)
 
 		}
 	}
