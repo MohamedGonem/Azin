@@ -18,6 +18,9 @@ const (
 	// Can be extended with more types as needed
 )
 
+// cache is used to store and retrieve TypeInfo instances for nominal types to avoid duplication.
+var cache = make(map[string]*TypeInfo)
+
 // TypeInfo represents the type information of a value in the type system.
 type TypeInfo struct {
 	Kind Kind
@@ -26,10 +29,21 @@ type TypeInfo struct {
 
 // NominalType returns a TypeInfo representing a nominal (user-defined) type with the given name.
 func NominalType(name string) *TypeInfo {
-	return &TypeInfo{
+	if name == "" {
+		return nil
+	}
+
+	if t, exists := cache[name]; exists {
+		return t
+	}
+
+	t := &TypeInfo{
 		Kind: Nominal,
 		Name: name,
 	}
+
+	cache[name] = t
+	return t
 }
 
 func (t *TypeInfo) Equals(other *TypeInfo) bool {
