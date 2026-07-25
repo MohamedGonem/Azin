@@ -21,9 +21,9 @@ func TestLookupBuiltin(t *testing.T) {
 
 	for _, tt := range tests {
 		result, ok := LookupBuiltin(tt.name)
-		if (result.Include != tt.exceptedValue || ok != tt.exceptedOk) {
-			t.Errorf("LookupBuiltin(%q) = (%q, %v); want (%q, %v)", 
-			tt.name, result, ok, tt.exceptedValue, tt.exceptedOk)
+		if result.Include != tt.exceptedValue || ok != tt.exceptedOk {
+			t.Errorf("LookupBuiltin(%q) = (%q, %v); want (%q, %v)",
+				tt.name, result, ok, tt.exceptedValue, tt.exceptedOk)
 		}
 	}
 }
