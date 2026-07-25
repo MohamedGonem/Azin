@@ -41,7 +41,6 @@ jobs:
 
   build:
     name: Build and test (${{ matrix.os }})
-    needs: lint
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
 
