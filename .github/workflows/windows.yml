@@ -35,6 +35,9 @@ jobs:
           go-version: 'stable'
           cache: true
 
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
       - name: Run go vet
         run: go vet ./...
 
