@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/azin-lang/Azin/internal/token"
+	"github.com/azin-lang/Azin/internal/types"
 )
 
 // Node is the interface implemented by every AST node.
@@ -76,11 +77,15 @@ func (*BadStmt) Label() string          { return "BadStmt" }
 // Statements
 
 type VarStmt struct {
-	Token   token.Token // var
-	Name    *Identifier
+	Token token.Token // var
+	Name  *Identifier
+	// Type is the AST identifier for the type of the variable. It should not be modified.
 	Type    *Identifier
 	Value   Expr
 	Mutable bool
+
+	// SemaType contains the type information for the variable, set after semantic analysis.
+	SemaType *types.TypeInfo
 }
 
 func (*VarStmt) stmtNode()              {}
@@ -142,12 +147,16 @@ func (e *EnumStmt) Label() string {
 }
 
 type FuncStmt struct {
-	Token      token.Token // fn
-	Name       *Identifier
-	Params     []*FieldDecl
+	Token  token.Token // fn
+	Name   *Identifier
+	Params []*FieldDecl
+	// ReturnType is the AST identifier for the return type of the function, can be nil for void functions. It should not be modified.
 	ReturnType *Identifier
 	Body       []Stmt
 	CName      string
+
+	// SemaReturnType is the return type of the function, set after semantic analysis.
+	SemaReturnType *types.TypeInfo
 }
 
 func (*FuncStmt) stmtNode()              {}
@@ -273,9 +282,13 @@ func (e *ExpressionStmt) Label() string {
 // Declarations
 
 type FieldDecl struct {
-	Name    *Identifier
+	Name *Identifier
+	// Type is the AST identifier for the type of the field. It should not be modified.
 	Type    *Identifier
 	Mutable bool
+
+	// SemaType contains the type information for the field, set after semantic analysis.
+	SemaType *types.TypeInfo
 }
 
 func (*FieldDecl) declNode() {}
