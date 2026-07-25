@@ -51,7 +51,7 @@ func TestVarStmt(t *testing.T) {
 	v := &ast.VarStmt{
 		Token:   tok(token.KwVar, 0, 3),
 		Name:    ident("x"),
-		Type:    ident("int"),
+		SynType: ident("int"),
 		Mutable: true,
 	}
 	if !strings.Contains(v.Label(), "var") {
@@ -70,10 +70,10 @@ func TestVarStmt(t *testing.T) {
 
 func TestFuncStmt(t *testing.T) {
 	f := &ast.FuncStmt{
-		Token:      tok(token.KwFn, 0, 2),
-		Name:       ident("add"),
-		Params:     []*ast.FieldDecl{{Name: ident("a"), Type: ident("int")}},
-		ReturnType: ident("int"),
+		Token:         tok(token.KwFn, 0, 2),
+		Name:          ident("add"),
+		Params:        []*ast.FieldDecl{{Name: ident("a"), SynType: ident("int")}},
+		SynReturnType: ident("int"),
 	}
 	label := f.Label()
 	if !strings.Contains(label, "add") {
@@ -218,8 +218,8 @@ func TestBinaryExpr(t *testing.T) {
 
 func TestFieldDecl(t *testing.T) {
 	f := &ast.FieldDecl{
-		Name: ident("name"),
-		Type: ident("string"),
+		Name:    ident("name"),
+		SynType: ident("string"),
 	}
 	if !strings.Contains(f.Label(), "name") {
 		t.Errorf("Label missing 'name': %q", f.Label())

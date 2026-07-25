@@ -19,8 +19,8 @@ func (a *Analyzer) CollectTypes(program *ast.Program) {
 			a.TypeDependencies[structName] = make(map[string]struct{})
 
 			for _, field := range n.Fields {
-				if field.Type != nil && field.Type.Value != "" {
-					a.TypeDependencies[structName][field.Type.Value] = struct{}{}
+				if field.SynType != nil && field.SynType.Value != "" {
+					a.TypeDependencies[structName][field.SynType.Value] = struct{}{}
 				}
 			}
 
@@ -95,14 +95,14 @@ func (a *Analyzer) collectTypesFromFunction(fn *ast.FuncStmt) {
 	}
 
 	// 1. Mark return type
-	if fn.ReturnType != nil && fn.ReturnType.Value != "" {
-		a.MarkTypeUsed(fn.ReturnType.Value)
+	if fn.SynReturnType != nil && fn.SynReturnType.Value != "" {
+		a.MarkTypeUsed(fn.SynReturnType.Value)
 	}
 
 	// 2. Mark parameter types
 	for _, param := range fn.Params {
-		if param.Type != nil && param.Type.Value != "" {
-			a.MarkTypeUsed(param.Type.Value)
+		if param.SynType != nil && param.SynType.Value != "" {
+			a.MarkTypeUsed(param.SynType.Value)
 		}
 	}
 
@@ -123,8 +123,8 @@ func (a *Analyzer) collectTypesFromStmt(stmt ast.Stmt) {
 
 	switch s := stmt.(type) {
 	case *ast.VarStmt:
-		if s.Type != nil && s.Type.Value != "" {
-			a.MarkTypeUsed(s.Type.Value)
+		if s.SynType != nil && s.SynType.Value != "" {
+			a.MarkTypeUsed(s.SynType.Value)
 		}
 		if s.Value != nil {
 			a.collectTypesFromExpr(s.Value)

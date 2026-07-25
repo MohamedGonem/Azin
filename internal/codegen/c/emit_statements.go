@@ -83,13 +83,13 @@ func (t *Transpiler) emitVariable(
 ) {
 	t.indentLine()
 
-	if stmt.Type == nil {
+	if stmt.SynType == nil {
 		t.write("/* variable missing type */")
 		t.write(";\n")
 		return
 	}
 
-	if stmt.Type.Value == "string" {
+	if stmt.SynType.Value == "string" {
 		if !stmt.Mutable {
 			t.write("const char* const ")
 		} else {
@@ -103,7 +103,7 @@ func (t *Transpiler) emitVariable(
 
 		t.printf(
 			"%s %s",
-			emitType(stmt.Type.Value),
+			emitType(stmt.SynType.Value),
 			stmt.Name.Value,
 		)
 	}

@@ -79,8 +79,8 @@ func (*BadStmt) Label() string          { return "BadStmt" }
 type VarStmt struct {
 	Token token.Token // var
 	Name  *Identifier
-	// Type is the AST identifier for the type of the variable. It should not be modified.
-	Type    *Identifier
+	// SynType is the AST identifier for the type of the variable. It should not be modified.
+	SynType *Identifier
 	Value   Expr
 	Mutable bool
 
@@ -100,8 +100,8 @@ func (v *VarStmt) Label() string {
 
 	s += v.Name.Value
 
-	if v.Type != nil {
-		s += ": " + v.Type.Value
+	if v.SynType != nil {
+		s += ": " + v.SynType.Value
 	}
 
 	return s
@@ -150,10 +150,10 @@ type FuncStmt struct {
 	Token  token.Token // fn
 	Name   *Identifier
 	Params []*FieldDecl
-	// ReturnType is the AST identifier for the return type of the function, can be nil for void functions. It should not be modified.
-	ReturnType *Identifier
-	Body       []Stmt
-	CName      string
+	// SynReturnType is the AST identifier for the return type of the function, can be nil for void functions. It should not be modified.
+	SynReturnType *Identifier
+	Body          []Stmt
+	CName         string
 
 	// SemaReturnType is the return type of the function, set after semantic analysis.
 	SemaReturnType *types.TypeInfo
@@ -177,15 +177,15 @@ func (f *FuncStmt) Label() string {
 
 		s.WriteString(p.Name.Value)
 
-		if p.Type != nil {
-			s.WriteString(": " + p.Type.Value)
+		if p.SynType != nil {
+			s.WriteString(": " + p.SynType.Value)
 		}
 	}
 
 	s.WriteString(")")
 
-	if f.ReturnType != nil {
-		s.WriteString(": " + f.ReturnType.Value)
+	if f.SynReturnType != nil {
+		s.WriteString(": " + f.SynReturnType.Value)
 	}
 
 	return s.String()
@@ -283,8 +283,8 @@ func (e *ExpressionStmt) Label() string {
 
 type FieldDecl struct {
 	Name *Identifier
-	// Type is the AST identifier for the type of the field. It should not be modified.
-	Type    *Identifier
+	// SynType is the AST identifier for the type of the field. It should not be modified.
+	SynType *Identifier
 	Mutable bool
 
 	// SemaType contains the type information for the field, set after semantic analysis.
@@ -304,8 +304,8 @@ func (f *FieldDecl) Label() string {
 
 	s += f.Name.Value
 
-	if f.Type != nil {
-		s += ": " + f.Type.Value
+	if f.SynType != nil {
+		s += ": " + f.SynType.Value
 	}
 
 	return s

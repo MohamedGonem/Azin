@@ -4,12 +4,12 @@ import "github.com/azin-lang/Azin/internal/ast"
 
 func (a *Analyzer) visitFunction(fn *ast.FuncStmt) {
 	name := FunctionName(fn)
-	if fn.ReturnType != nil {
-		a.MarkTypeUsed(fn.ReturnType.Value)
+	if fn.SynReturnType != nil {
+		a.MarkTypeUsed(fn.SynReturnType.Value)
 	}
 	for _, param := range fn.Params {
-		if param.Type != nil {
-			a.MarkTypeUsed(param.Type.Value)
+		if param.SynType != nil {
+			a.MarkTypeUsed(param.SynType.Value)
 			a.registerVariable(name, param.Name.Value)
 			a.useVariable(name, param.Name.Value)
 		}

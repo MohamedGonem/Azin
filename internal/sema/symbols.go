@@ -72,11 +72,11 @@ func sameParamTypes(left, right *ast.FuncStmt) bool {
 	}
 
 	for i := range left.Params {
-		if left.Params[i].Type == nil || right.Params[i].Type == nil {
+		if left.Params[i].SynType == nil || right.Params[i].SynType == nil {
 			return false
 		}
 
-		if left.Params[i].Type.Value != right.Params[i].Type.Value {
+		if left.Params[i].SynType.Value != right.Params[i].SynType.Value {
 			return false
 		}
 	}

@@ -42,7 +42,7 @@ func mangleFunctionName(fn *ast.FuncStmt) string {
 	var name strings.Builder
 	name.WriteString(fn.Name.Value)
 	for _, param := range fn.Params {
-		name.WriteString("__" + param.Type.Value)
+		name.WriteString("__" + param.SynType.Value)
 	}
 
 	return name.String()
@@ -223,7 +223,7 @@ func (a *Analyzer) resolveCallOverload(name string, argTypes []*types.TypeInfo) 
 			want := overload.Function.Params[i].SemaType
 
 			if want == nil || want.IsUnknown() {
-				a.errorf(overload.Function.Params[i].Type, "internal compiler error: parameter type not inferred")
+				a.errorf(overload.Function.Params[i].SynType, "internal compiler error: parameter type not inferred")
 			}
 
 			if got == nil || want == nil || !types.IsAssignable(got, want) {
@@ -319,9 +319,9 @@ func (a *Analyzer) registerTopLevelSymbols(program *ast.Program) {
 		case *ast.StructStmt:
 			// Resolve the types of the fields in the struct.
 			for _, field := range n.Fields {
-				fieldType := a.lookupType(field.Type.Value)
+				fieldType := a.lookupType(field.SynType.Value)
 				if fieldType == nil {
-					a.errorf(field.Type, "unknown type: %s", field.Type.Value)
+					a.errorf(field.SynType, "unknown type: %s", field.SynType.Value)
 					fieldType = types.ErrorType()
 				}
 
@@ -331,10 +331,10 @@ func (a *Analyzer) registerTopLevelSymbols(program *ast.Program) {
 
 		case *ast.FuncStmt:
 			returnType := types.UnknownType()
-			if n.ReturnType != nil {
-				returnType = a.lookupType(n.ReturnType.Value)
+			if n.SynReturnType != nil {
+				returnType = a.lookupType(n.SynReturnType.Value)
 				if returnType == nil {
-					a.errorf(n.ReturnType, "unknown return type: %s", n.ReturnType.Value)
+					a.errorf(n.SynReturnType, "unknown return type: %s", n.SynReturnType.Value)
 					returnType = types.ErrorType()
 				}
 			}
@@ -347,9 +347,9 @@ func (a *Analyzer) registerTopLevelSymbols(program *ast.Program) {
 			})
 
 			for _, param := range n.Params {
-				paramType := a.lookupType(param.Type.Value)
+				paramType := a.lookupType(param.SynType.Value)
 				if paramType == nil {
-					a.errorf(param.Type, "unknown parameter type: %s", param.Type.Value)
+					a.errorf(param.SynType, "unknown parameter type: %s", param.SynType.Value)
 					paramType = types.ErrorType()
 				}
 
@@ -434,7 +434,7 @@ func (a *Analyzer) visitStatement(stmt ast.Stmt) {
 			}
 
 			if param.SemaType == nil || param.SemaType.IsUnknown() {
-				a.errorf(param.Type, "internal compiler error: parameter type is null or not inferred")
+				a.errorf(param.SynType, "internal compiler error: parameter type is null or not inferred")
 				param.SemaType = types.ErrorType()
 			}
 
@@ -464,7 +464,7 @@ func (a *Analyzer) visitStatement(stmt ast.Stmt) {
 					n.Name,
 					"function '%s' must return %s on all paths",
 					n.Name.Value,
-					n.ReturnType.Value,
+					n.SynReturnType.Value,
 				)
 			}
 		}
@@ -502,16 +502,16 @@ func (a *Analyzer) visitStatement(stmt ast.Stmt) {
 		a.analyzeExpr(n.Call)
 
 	case *ast.VarStmt:
-		if n.Value == nil && n.Type == nil {
+		if n.Value == nil && n.SynType == nil {
 			a.errorf(n.Name, "variable '%s' must have a type or an initializer", n.Name.Value)
 			return
 		}
 
 		varType := types.UnknownType()
-		if n.Type != nil {
-			varType = a.lookupType(n.Type.Value)
+		if n.SynType != nil {
+			varType = a.lookupType(n.SynType.Value)
 			if varType == nil {
-				a.errorf(n.Type, "unknown type: %s", n.Type.Value)
+				a.errorf(n.SynType, "unknown type: %s", n.SynType.Value)
 				varType = types.ErrorType()
 			}
 		}
@@ -752,7 +752,7 @@ func (a *Analyzer) inferFunctionReturnType(fn *ast.FuncStmt) {
 
 	for _, stmt := range fn.Body {
 		if typ := a.findReturnExprType(stmt); typ != nil {
-			fn.ReturnType = &ast.Identifier{Value: typ.Name}
+			fn.SynReturnType = &ast.Identifier{Value: typ.Name}
 			fn.SemaReturnType = typ
 
 			if sym != nil {
@@ -763,7 +763,7 @@ func (a *Analyzer) inferFunctionReturnType(fn *ast.FuncStmt) {
 		}
 	}
 
-	fn.ReturnType = &ast.Identifier{Value: "unit"}
+	fn.SynReturnType = &ast.Identifier{Value: "unit"}
 	fn.SemaReturnType = types.UnitType()
 
 	if sym != nil {

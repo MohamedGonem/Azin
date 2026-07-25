@@ -117,14 +117,14 @@ func compact(v reflect.Value) (string, bool) {
 		return "❌", true
 
 	case *FieldDecl:
-		if n.Type == nil {
+		if n.SynType == nil {
 			return n.Name.Value, true
 		}
 
 		return fmt.Sprintf(
 			"%s: %s",
 			n.Name.Value,
-			n.Type.Label(),
+			n.SynType.Label(),
 		), true
 	}
 

@@ -68,8 +68,8 @@ func (t *Transpiler) analyze(program *ast.Program) {
 
 			var deps []string
 			for _, f := range s.Fields {
-				if f.Type != nil {
-					deps = append(deps, f.Type.Value)
+				if f.SynType != nil {
+					deps = append(deps, f.SynType.Value)
 				}
 			}
 			t.structDeps[s.Name.Value] = deps

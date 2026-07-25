@@ -39,10 +39,10 @@ func (t *Transpiler) emitStruct(
 	for _, field := range s.Fields {
 		t.indentLine()
 
-		typ := emitType(field.Type.Value)
+		typ := emitType(field.SynType.Value)
 
 		// Convert to a pointer if it creates a cycle
-		if t.isCyclicField(s.Name.Value, field.Type.Value) {
+		if t.isCyclicField(s.Name.Value, field.SynType.Value) {
 			typ += "*"
 		}
 

@@ -23,8 +23,8 @@ func (t *Transpiler) emitFunction(
 	t.flushDefers()
 
 	if t.functionName(fn) == "main" &&
-		fn.ReturnType != nil &&
-		emitType(fn.ReturnType.Value) == "void" {
+		fn.SynReturnType != nil &&
+		emitType(fn.SynReturnType.Value) == "void" {
 
 		t.indentLine()
 		t.write("return 0;\n")
@@ -40,7 +40,7 @@ func (t *Transpiler) emitFunctionSignature(
 ) {
 	name := t.functionName(fn)
 
-	if fn.ReturnType == nil {
+	if fn.SynReturnType == nil {
 		t.printf("void %s(", name)
 		t.write("void")
 		t.write(") /* missing return type */")
@@ -48,7 +48,7 @@ func (t *Transpiler) emitFunctionSignature(
 	}
 
 	ret := emitType(
-		fn.ReturnType.Value,
+		fn.SynReturnType.Value,
 	)
 
 	if name == "main" &&
@@ -72,14 +72,14 @@ func (t *Transpiler) emitFunctionSignature(
 				t.write(", ")
 			}
 
-			if param.Type == nil {
+			if param.SynType == nil {
 				t.printf("void %s /* missing type */", param.Name.Value)
 				continue
 			}
 
 			t.printf(
 				"%s %s",
-				emitType(param.Type.Value),
+				emitType(param.SynType.Value),
 				param.Name.Value,
 			)
 		}
