@@ -2,7 +2,7 @@
     ╰── Statements
         ╰── FuncStmt "fn main(): int"
             ├── Name: main
-            ├── ReturnType: int
+            ├── SynReturnType: int
             ╰── Body
                 ╰── ReturnStmt "return"
                     ╰── Value: 0
