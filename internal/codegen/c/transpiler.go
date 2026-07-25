@@ -5,6 +5,7 @@ import (
 
 	"github.com/azin-lang/Azin/internal/ast"
 	"github.com/azin-lang/Azin/internal/codegen/c/analysis"
+	"github.com/azin-lang/Azin/internal/types"
 )
 
 type Transpiler struct {
@@ -12,7 +13,7 @@ type Transpiler struct {
 
 	enums          map[string]struct{}
 	structs        map[string]struct{}
-	reachableTypes map[string]struct{}
+	reachableTypes map[*types.TypeInfo]struct{}
 	structDeps     map[string][]string
 	includes       map[string]struct{}
 
@@ -28,7 +29,7 @@ func New() *Transpiler {
 	return &Transpiler{
 		enums:          make(map[string]struct{}),
 		structs:        make(map[string]struct{}),
-		reachableTypes: make(map[string]struct{}),
+		reachableTypes: make(map[*types.TypeInfo]struct{}),
 		structDeps:     make(map[string][]string),
 		includes:       make(map[string]struct{}),
 		funcIndices:    make(map[string]int),
@@ -68,8 +69,8 @@ func (t *Transpiler) analyze(program *ast.Program) {
 
 			var deps []string
 			for _, f := range s.Fields {
-				if f.Type != nil {
-					deps = append(deps, f.Type.Value)
+				if f.SemaType.IsComplete() {
+					deps = append(deps, f.SemaType.Name)
 				}
 			}
 			t.structDeps[s.Name.Value] = deps

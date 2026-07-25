@@ -2,7 +2,7 @@
     ╰── Statements
         ╰── FuncStmt "fn test(): int"
             ├── Name: test
-            ├── ReturnType: int
+            ├── SynReturnType: int
             ╰── Body
                 ╰── IfStmt "if"
                     ├── Condition: ✅

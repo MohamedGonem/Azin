@@ -59,7 +59,7 @@ func (p *Parser) parseVar() ast.Stmt {
 	return &ast.VarStmt{
 		Token:   tok,
 		Name:    name,
-		Type:    typ,
+		SynType: typ,
 		Value:   value,
 		Mutable: mutable,
 	}
@@ -289,7 +289,7 @@ func (p *Parser) parseFunc() ast.Stmt {
 	p.expect(token.KwEnd, "to close function")
 
 	// Return partial function node even if errors occurred (allows autocomplete to work inside)
-	return &ast.FuncStmt{Token: tok, Name: name, Params: params, ReturnType: retType, Body: body}
+	return &ast.FuncStmt{Token: tok, Name: name, Params: params, SynReturnType: retType, Body: body}
 }
 
 func (p *Parser) parseReturn() ast.Stmt {
@@ -446,7 +446,7 @@ func (p *Parser) parseFieldDecl(allowMut bool) *ast.FieldDecl {
 
 	return &ast.FieldDecl{
 		Name:    name,
-		Type:    tName,
+		SynType: tName,
 		Mutable: mutable,
 	}
 }

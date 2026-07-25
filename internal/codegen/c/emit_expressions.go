@@ -7,6 +7,7 @@ import (
 
 	"github.com/azin-lang/Azin/internal/ast"
 	"github.com/azin-lang/Azin/internal/token"
+	"github.com/azin-lang/Azin/internal/types"
 )
 
 func (t *Transpiler) emitExpression(
@@ -99,30 +100,29 @@ func (t *Transpiler) emitExpression(
 }
 
 func emitType(
-	name string,
+	t *types.TypeInfo,
 ) string {
-	switch name {
-
-	case "unit":
+	switch t.Kind {
+	case types.Unit:
 		return "void"
 
-	case "int":
+	case types.Int:
 		return "int"
 
-	case "float":
+	case types.Float:
 		return "float"
 
-	case "char":
+	case types.Char:
 		return "char"
 
-	case "string":
+	case types.String:
 		return "char*"
 
-	case "bool":
+	case types.Bool:
 		return "bool"
 
 	default:
-		return name
+		return t.Name
 	}
 }
 

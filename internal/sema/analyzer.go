@@ -2,6 +2,7 @@
 package sema
 
 import (
+	"fmt"
 	"slices"
 
 	"strings"
@@ -9,6 +10,7 @@ import (
 	"github.com/azin-lang/Azin/internal/ast"
 	"github.com/azin-lang/Azin/internal/diagnostics"
 	"github.com/azin-lang/Azin/internal/token"
+	"github.com/azin-lang/Azin/internal/types"
 )
 
 /*
@@ -40,7 +42,7 @@ func mangleFunctionName(fn *ast.FuncStmt) string {
 	var name strings.Builder
 	name.WriteString(fn.Name.Value)
 	for _, param := range fn.Params {
-		name.WriteString("__" + param.Type.Value)
+		name.WriteString("__" + param.SynType.Value)
 	}
 
 	return name.String()
@@ -89,7 +91,7 @@ func (a *Analyzer) resolveCallExpr(n *ast.CallExpr) *Symbol {
 		return nil
 	}
 
-	argTypes := make([]*ast.Identifier, len(n.Args))
+	argTypes := make([]*types.TypeInfo, len(n.Args))
 	for i, arg := range n.Args {
 		argTypes[i] = a.inferExprType(arg)
 	}
@@ -203,7 +205,7 @@ func (a *Analyzer) verifyResolvedCalls(program *ast.Program) {
 	}
 }
 
-func (a *Analyzer) resolveCallOverload(name string, argTypes []*ast.Identifier) *Symbol {
+func (a *Analyzer) resolveCallOverload(name string, argTypes []*types.TypeInfo) *Symbol {
 	overloads := a.lookupFunctions(name)
 	if len(overloads) == 0 {
 		return nil
@@ -218,9 +220,13 @@ func (a *Analyzer) resolveCallOverload(name string, argTypes []*ast.Identifier) 
 
 		match := true
 		for i, got := range argTypes {
-			want := overload.Function.Params[i].Type
+			want := overload.Function.Params[i].SemaType
 
-			if got == nil || want == nil || got.Value != want.Value {
+			if want == nil || want.IsUnknown() {
+				a.errorf(overload.Function.Params[i].SynType, "internal compiler error: parameter type not inferred")
+			}
+
+			if got == nil || want == nil || !types.IsAssignable(got, want) {
 				match = false
 				break
 			}
@@ -261,35 +267,7 @@ func (a *Analyzer) Analyze(program *ast.Program) error {
 	a.pushScope()
 	defer a.popScope()
 
-	// Register every top level symbol first
-	for _, stmt := range program.Statements {
-		switch n := stmt.(type) {
-
-		case *ast.FuncStmt:
-			a.declareFunction(&Symbol{
-				Name:     n.Name.Value,
-				Type:     n.ReturnType,
-				Kind:     SymbolFunction,
-				Function: n,
-			})
-
-		case *ast.StructStmt:
-			a.declare(&Symbol{
-				Name:   n.Name.Value,
-				Kind:   SymbolStruct,
-				Struct: n,
-			})
-
-		case *ast.EnumStmt:
-			a.declare(&Symbol{
-				Name: n.Name.Value,
-				Kind: SymbolEnum,
-				Enum: n,
-			})
-
-		}
-	}
-
+	a.registerTopLevelSymbols(program)
 	a.assignFunctionCNames()
 
 	// Infer function return types before sema analysis.
@@ -311,6 +289,104 @@ func (a *Analyzer) Analyze(program *ast.Program) error {
 	a.verifyResolvedCalls(program)
 
 	return a.diag.Err()
+}
+
+func (a *Analyzer) registerTopLevelSymbols(program *ast.Program) {
+	// Register top-level types first, so that they can be used in function signatures and variable declarations.
+	for _, stmt := range program.Statements {
+		switch n := stmt.(type) {
+
+		case *ast.StructStmt:
+			a.declare(&Symbol{
+				Name:   n.Name.Value,
+				Kind:   SymbolStruct,
+				Struct: n,
+			})
+
+			n.SemaType = types.NominalType(n.Name.Value)
+
+		case *ast.EnumStmt:
+			a.declare(&Symbol{
+				Name: n.Name.Value,
+				Kind: SymbolEnum,
+				Enum: n,
+			})
+
+			n.SemaType = types.NominalType(n.Name.Value)
+
+		}
+	}
+
+	// Register top-level functions their parameters and return type resolved + Resolving field's types.
+	for _, stmt := range program.Statements {
+		switch n := stmt.(type) {
+		case *ast.StructStmt:
+			// Resolve the types of the fields in the struct.
+			for _, field := range n.Fields {
+				fieldType := a.lookupType(field.SynType.Value)
+				if fieldType == nil {
+					a.errorf(field.SynType, "unknown type: %s", field.SynType.Value)
+					fieldType = types.ErrorType()
+				}
+
+				// Store the TypeInfo in the field node for later phase.
+				field.SemaType = fieldType
+			}
+
+		case *ast.FuncStmt:
+			returnType := types.UnknownType()
+			if n.SynReturnType != nil {
+				returnType = a.lookupType(n.SynReturnType.Value)
+				if returnType == nil {
+					a.errorf(n.SynReturnType, "unknown return type: %s", n.SynReturnType.Value)
+					returnType = types.ErrorType()
+				}
+			}
+
+			a.declareFunction(&Symbol{
+				Name:     n.Name.Value,
+				Type:     returnType,
+				Kind:     SymbolFunction,
+				Function: n,
+			})
+
+			for _, param := range n.Params {
+				paramType := a.lookupType(param.SynType.Value)
+				if paramType == nil {
+					a.errorf(param.SynType, "unknown parameter type: %s", param.SynType.Value)
+					paramType = types.ErrorType()
+				}
+
+				// Store the TypeInfo in the parameter node for later phase.
+				param.SemaType = paramType
+			}
+
+			n.SemaReturnType = returnType
+		}
+	}
+}
+
+func (a *Analyzer) lookupType(name string) *types.TypeInfo {
+	if primitive := types.GetPrimitiveTypeByName(name); primitive != nil {
+		return primitive
+	}
+
+	sym := a.lookup(name)
+	if sym == nil {
+		return nil
+	}
+
+	switch sym.Kind {
+	case SymbolStruct, SymbolEnum:
+		return types.NominalType(sym.Name)
+	default:
+		if sym.Type != nil {
+			return sym.Type
+		}
+
+		fmt.Println("internal compiler error: symbol has no type info:", sym.Name)
+		return nil
+	}
 }
 
 func (a *Analyzer) lookupStruct(name string) *ast.StructStmt {
@@ -361,33 +437,38 @@ func (a *Analyzer) visitStatement(stmt ast.Stmt) {
 				continue
 			}
 
+			if param.SemaType == nil || param.SemaType.IsUnknown() {
+				a.errorf(param.SynType, "internal compiler error: parameter type is null or not inferred")
+				param.SemaType = types.ErrorType()
+			}
+
 			a.declare(&Symbol{
 				Name:     param.Name.Value,
-				Type:     param.Type,
+				Type:     param.SemaType,
 				Kind:     SymbolVariable,
 				DeclNode: param.Name,
 			})
+		}
+
+		if n.SemaReturnType == nil || n.SemaReturnType.IsUnknown() {
+			a.inferFunctionReturnType(n)
+
+			if sym := a.lookupFunctionSymbol(n); sym != nil {
+				sym.Type = n.SemaReturnType
+			}
 		}
 
 		for _, stmt := range n.Body {
 			a.visitStatement(stmt)
 		}
 
-		if n.ReturnType == nil {
-			a.inferFunctionReturnType(n)
-
-			if sym := a.lookupFunctionSymbol(n); sym != nil {
-				sym.Type = n.ReturnType
-			}
-		}
-
-		if n.ReturnType != nil && n.ReturnType.Value != "unit" {
+		if n.SemaReturnType != nil && !n.SemaReturnType.IsUnit() {
 			if !a.blockAllPathsReturn(n.Body) {
 				a.errorf(
 					n.Name,
 					"function '%s' must return %s on all paths",
 					n.Name.Value,
-					n.ReturnType.Value,
+					n.SynReturnType.Value,
 				)
 			}
 		}
@@ -399,14 +480,14 @@ func (a *Analyzer) visitStatement(stmt ast.Stmt) {
 			return
 		}
 
-		actual := &ast.Identifier{Value: "unit"}
+		actual := types.UnitType()
 		if n.Value != nil {
 			actual = a.inferExprType(n.Value)
 		}
 
-		expected := a.currentFunction.ReturnType
+		expected := a.currentFunction.SemaReturnType
 
-		if expected != nil && actual != nil && expected.Value != actual.Value {
+		if expected != nil && actual != nil && !types.IsAssignable(actual, expected) {
 			var posErr ast.Node
 			if n.Value == nil {
 				posErr = n
@@ -416,8 +497,8 @@ func (a *Analyzer) visitStatement(stmt ast.Stmt) {
 			a.errorf(
 				posErr,
 				"return type mismatch: expected %s, got %s",
-				expected.Value,
-				actual.Value,
+				expected.Name,
+				actual.Name,
 			)
 		}
 
@@ -425,21 +506,36 @@ func (a *Analyzer) visitStatement(stmt ast.Stmt) {
 		a.analyzeExpr(n.Call)
 
 	case *ast.VarStmt:
-		if n.Type == nil {
-			n.Type = a.inferExprType(n.Value)
-		} else if n.Value != nil {
-			got := a.inferExprType(n.Value)
+		if n.Value == nil && n.SynType == nil {
+			a.errorf(n.Name, "variable '%s' must have a type or an initializer", n.Name.Value)
+			return
+		}
 
-			if got != nil && got.Value != n.Type.Value {
+		varType := types.UnknownType()
+		if n.SynType != nil {
+			varType = a.lookupType(n.SynType.Value)
+			if varType == nil {
+				a.errorf(n.SynType, "unknown type: %s", n.SynType.Value)
+				varType = types.ErrorType()
+			}
+		}
+
+		if n.Value != nil {
+			valueType := a.inferExprType(n.Value)
+			if varType.IsUnknown() {
+				varType = valueType
+			} else if !types.IsAssignable(valueType, varType) {
 				a.errorf(
 					n.Value,
 					"cannot initialize variable '%s' of type '%s' with value of type '%s'",
 					n.Name.Value,
-					n.Type.Value,
-					got.Value,
+					varType.Name,
+					valueType.Name,
 				)
 			}
 		}
+
+		n.SemaType = varType
 
 		if a.checkEnumShadow(n.Name) {
 			return
@@ -447,7 +543,7 @@ func (a *Analyzer) visitStatement(stmt ast.Stmt) {
 
 		a.declare(&Symbol{
 			Name:     n.Name.Value,
-			Type:     n.Type,
+			Type:     varType,
 			Kind:     SymbolVariable,
 			Mutable:  n.Mutable,
 			DeclNode: n.Name,
@@ -455,8 +551,8 @@ func (a *Analyzer) visitStatement(stmt ast.Stmt) {
 
 	case *ast.IfStmt:
 		cond := a.inferExprType(n.Condition)
-		if cond != nil && cond.Value != "bool" {
-			a.errorf(n.Condition, "if condition must be bool, got %s", cond.Value)
+		if cond != nil && !cond.IsBool() {
+			a.errorf(n.Condition, "if condition must be bool, got %s", cond.Name)
 		}
 
 		a.pushScope()
@@ -517,13 +613,13 @@ func (a *Analyzer) visitStatement(stmt ast.Stmt) {
 
 			got := a.inferExprType(n.Value)
 
-			if got != nil && sym.Type != nil && got.Value != sym.Type.Value {
+			if got != nil && sym.Type != nil && !types.IsAssignable(got, sym.Type) {
 				a.errorf(
 					n.Value,
 					"cannot assign %s to variable '%s' of type %s",
-					got.Value,
+					got.Name,
 					left.Value,
-					sym.Type.Value,
+					sym.Type.Name,
 				)
 			}
 
@@ -534,9 +630,14 @@ func (a *Analyzer) visitStatement(stmt ast.Stmt) {
 				return
 			}
 
-			strct := a.lookupStruct(objectType.Value)
+			if objectType.Kind != types.Nominal {
+				a.errorf(n.Value, "'%s' is not a struct", objectType.Name)
+				return
+			}
+
+			strct := a.lookupStruct(objectType.Name)
 			if strct == nil {
-				a.errorf(n.Value, "'%s' is not a struct", objectType.Value)
+				a.errorf(n.Value, "'%s' is not a struct", objectType.Name)
 				return
 			}
 
@@ -553,12 +654,12 @@ func (a *Analyzer) visitStatement(stmt ast.Stmt) {
 
 			got := a.inferExprType(n.Value)
 
-			if got != nil && got.Value != field.Type.Value {
+			if got != nil && !types.IsAssignable(got, field.SemaType) {
 				a.errorf(
 					n.Value, "cannot assign %s to field '%s' of type %s",
-					got.Value,
+					got.Name,
 					field.Name.Value,
-					field.Type.Value,
+					field.SemaType.Name,
 				)
 			}
 
@@ -571,11 +672,11 @@ func (a *Analyzer) visitStatement(stmt ast.Stmt) {
 	}
 }
 
-func (a *Analyzer) findReturnExprType(stmt ast.Stmt) *ast.Identifier {
+func (a *Analyzer) findReturnExprType(stmt ast.Stmt) *types.TypeInfo {
 	switch n := stmt.(type) {
 	case *ast.ReturnStmt:
 		if n.Value == nil {
-			return &ast.Identifier{Value: "unit"}
+			return types.UnitType()
 		}
 		return a.inferExprType(n.Value)
 
@@ -637,8 +738,8 @@ func (a *Analyzer) stmtAllPathsReturn(stmt ast.Stmt) bool {
 }
 
 func (a *Analyzer) inferFunctionReturnType(fn *ast.FuncStmt) {
-
-	if fn.ReturnType != nil {
+	if fn.SemaReturnType != nil && !fn.SemaReturnType.IsUnknown() {
+		// The return type has already been inferred or explicitly specified, so we don't need to infer it again.
 		return
 	}
 
@@ -655,7 +756,8 @@ func (a *Analyzer) inferFunctionReturnType(fn *ast.FuncStmt) {
 
 	for _, stmt := range fn.Body {
 		if typ := a.findReturnExprType(stmt); typ != nil {
-			fn.ReturnType = typ
+			fn.SynReturnType = &ast.Identifier{Value: typ.Name}
+			fn.SemaReturnType = typ
 
 			if sym != nil {
 				sym.Type = typ
@@ -665,106 +767,106 @@ func (a *Analyzer) inferFunctionReturnType(fn *ast.FuncStmt) {
 		}
 	}
 
-	fn.ReturnType = &ast.Identifier{Value: "unit"}
+	fn.SynReturnType = &ast.Identifier{Value: "unit"}
+	fn.SemaReturnType = types.UnitType()
 
 	if sym != nil {
-		sym.Type = fn.ReturnType
+		sym.Type = fn.SemaReturnType
 	}
 }
 
-func (a *Analyzer) inferExprType(expr ast.Expr) *ast.Identifier {
+func (a *Analyzer) inferExprType(expr ast.Expr) *types.TypeInfo {
+	if expr != nil && expr.Type().IsComplete() {
+		// Type has already been inferred, so we can return it directly.
+		return expr.Type()
+	}
+
 	switch n := expr.(type) {
-
-	case *ast.BadExpr:
-		return nil
-
-	case *ast.IntegerLiteral:
-		return &ast.Identifier{Value: "int"}
-
-	case *ast.FloatLiteral:
-		return &ast.Identifier{Value: "float"}
-
-	case *ast.CharacterLiteral:
-		return &ast.Identifier{Value: "char"}
-
-	case *ast.StringLiteral:
-		return &ast.Identifier{Value: "string"}
-
-	case *ast.BooleanLiteral:
-		return &ast.Identifier{
-			Value: "bool",
-		}
-
 	case *ast.Identifier:
-		if sym := a.lookup(n.Value); sym != nil {
-			return sym.Type
+		resultType := a.lookupType(n.Value)
+		if resultType == nil {
+			resultType = types.ErrorType()
+			a.errorf(n, "unknown identifier: %s", n.Value)
 		}
 
-		a.errorf(n, "unknown identifier: %s", n.Value)
-		return nil
+		n.SemaType = resultType
+		return resultType
 
 	case *ast.CallExpr:
 		sym := a.resolveCallExpr(n)
+
+		n.SemaReturnType = types.UnknownType()
 		if sym == nil {
 			// FIXME: any function returning a C call's result will fail. When are we creating a signature table for the headers?
 			// Or better yet, add actual header parsing...
-			return nil
+			n.SemaReturnType = types.ErrorType()
+			return types.ErrorType()
 		}
 
 		if sym.Inferring {
-			return nil
+			return types.UnknownType()
 		}
 
-		if sym.Type == nil {
+		if !sym.Type.IsComplete() {
+			// If the function's return type is not yet inferred, we need to infer it now.
 			a.inferFunctionReturnType(sym.Function)
 		}
 
+		n.SemaReturnType = sym.Type
 		return sym.Type
 
 	case *ast.BinaryExpr:
 		left := a.inferExprType(n.Left)
 		right := a.inferExprType(n.Right)
 
-		if left == nil || right == nil {
-			return nil
+		if !left.IsValid() || !right.IsValid() {
+			n.SemaResultType = types.ErrorType()
+			return types.ErrorType()
 		}
+
 		//nolint:exhaustive
 		switch n.Operator.Kind {
 		case token.Plus, token.Minus, token.Star, token.Slash:
-			if (left.Value != "int" && left.Value != "float") ||
-				(right.Value != "int" && right.Value != "float") {
+			if !left.IsNumeric() || !right.IsNumeric() {
 				a.errorf(
 					n,
 					"operator '%s' requires numeric operands",
 					n.TokenLiteral(),
 				)
-				return nil
+
+				n.SemaResultType = types.ErrorType()
+				return types.ErrorType()
 			}
 
-			if left.Value == "float" || right.Value == "float" {
-				return &ast.Identifier{Value: "float"}
+			if left.IsFloat() || right.IsFloat() {
+				n.SemaResultType = types.FloatType()
+				return types.FloatType()
 			}
 
-			return &ast.Identifier{Value: "int"}
+			n.SemaResultType = types.IntType()
+			return types.IntType()
 
 		case token.EqualEqual, token.BangEqual,
 			token.Less, token.LessEqual,
 			token.Greater, token.GreaterEqual:
 
-			if left.Value != right.Value {
+			if !left.Equals(right) {
 				a.errorf(
 					n,
 					"cannot compare %s with %s",
-					left.Value,
-					right.Value,
+					left.Name,
+					right.Name,
 				)
-				return nil
+				n.SemaResultType = types.ErrorType()
+				return types.ErrorType()
 			}
 
-			return &ast.Identifier{Value: "bool"}
+			n.SemaResultType = types.BoolType()
+			return types.BoolType()
 		}
 
-		return nil
+		n.SemaResultType = types.ErrorType()
+		return types.ErrorType()
 
 	case *ast.MemberExpr:
 		// the object is a type name used as a namespace, so it must be resolved before type inference
@@ -772,37 +874,50 @@ func (a *Analyzer) inferExprType(expr ast.Expr) *ast.Identifier {
 			if sym := a.lookup(id.Value); sym != nil && sym.Kind == SymbolEnum {
 				for _, variant := range sym.Enum.Variants {
 					if variant.Value == n.Property.Value {
-						return &ast.Identifier{Value: sym.Enum.Name.Value}
+						n.SemaResultType = types.NominalType(sym.Enum.Name.Value)
+						return n.SemaResultType
 					}
 				}
 
 				a.errorf(n.Property, "enum '%s' has no variant '%s'", sym.Enum.Name.Value, n.Property.Value)
-				return nil
+				n.SemaResultType = types.ErrorType()
+				return n.SemaResultType
 			}
 		}
 
 		objectType := a.inferExprType(n.Object)
-		if objectType == nil {
-			return nil
+		if !objectType.IsValid() {
+			n.SemaResultType = types.ErrorType()
+			return n.SemaResultType
 		}
 
-		strct := a.lookupStruct(objectType.Value)
+		if objectType.Kind != types.Nominal {
+			a.errorf(n.Object, "'%s' is not a struct", objectType.Name)
+			n.SemaResultType = types.ErrorType()
+			return n.SemaResultType
+		}
+
+		strct := a.lookupStruct(objectType.Name)
 		if strct == nil {
-			a.errorf(n.Object, "'%s' is not a struct", objectType.Value)
-			return nil
+			a.errorf(n.Object, "'%s' is not a struct", objectType.Name)
+			n.SemaResultType = types.ErrorType()
+			return n.SemaResultType
 		}
 
 		for _, field := range strct.Fields {
 			if field.Name.Value == n.Property.Value {
-				return field.Type
+				n.SemaResultType = field.SemaType
+				return n.SemaResultType
 			}
 		}
 
 		a.errorf(n.Property, "struct '%s' has no field '%s'", strct.Name.Value, n.Property.Value)
-		return nil
+		n.SemaResultType = types.ErrorType()
+		return n.SemaResultType
 	}
 
-	return nil
+	a.errorf(expr, "internal compiler error: cannot infer type for expression")
+	return types.ErrorType()
 }
 
 func isBuiltin(name string) bool {

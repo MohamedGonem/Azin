@@ -7,7 +7,7 @@
         │       ╰── y: int
         ╰── FuncStmt "fn distance(): int"
             ├── Name: distance
-            ├── ReturnType: int
+            ├── SynReturnType: int
             ╰── Body
                 ╰── ReturnStmt "return"
                     ╰── Value: 0

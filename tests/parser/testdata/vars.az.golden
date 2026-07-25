@@ -2,20 +2,20 @@
     ╰── Statements
         ╰── FuncStmt "fn main(): int"
             ├── Name: main
-            ├── ReturnType: int
+            ├── SynReturnType: int
             ╰── Body
                 ├── VarStmt "var x: int"
                 │   ├── Name: x
-                │   ├── Type: int
+                │   ├── SynType: int
                 │   ╰── Value: 42
                 ├── VarStmt "var mut y: float"
                 │   ├── Name: y
-                │   ├── Type: float
+                │   ├── SynType: float
                 │   ├── Value: 3.14
                 │   ╰── Mutable: ✅
                 ├── VarStmt "var name: string"
                 │   ├── Name: name
-                │   ├── Type: string
+                │   ├── SynType: string
                 │   ╰── Value: "azin"
                 ╰── ReturnStmt "return"
                     ╰── Value: 0

@@ -1,6 +1,9 @@
 package sema
 
-import "github.com/azin-lang/Azin/internal/ast"
+import (
+	"github.com/azin-lang/Azin/internal/ast"
+	"github.com/azin-lang/Azin/internal/types"
+)
 
 // SymbolKind represents the kind of a symbol (variable, function, struct).
 type SymbolKind uint8
@@ -15,7 +18,7 @@ const (
 // Symbol represents a symbol in the sema analysis phase.
 type Symbol struct {
 	Name     string
-	Type     *ast.Identifier
+	Type     *types.TypeInfo
 	Kind     SymbolKind
 	Mutable  bool
 	Used     bool
@@ -69,11 +72,11 @@ func sameParamTypes(left, right *ast.FuncStmt) bool {
 	}
 
 	for i := range left.Params {
-		if left.Params[i].Type == nil || right.Params[i].Type == nil {
+		if left.Params[i].SemaType == nil || right.Params[i].SemaType == nil {
 			return false
 		}
 
-		if left.Params[i].Type.Value != right.Params[i].Type.Value {
+		if !left.Params[i].SemaType.Equals(right.Params[i].SemaType) {
 			return false
 		}
 	}

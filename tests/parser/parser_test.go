@@ -120,8 +120,8 @@ func TestParserFnNoReturnType(t *testing.T) {
 		t.Fatalf("unexpected errors: %v", diag.Err())
 	}
 	fn := program.Statements[0].(*ast.FuncStmt)
-	if fn.ReturnType != nil {
-		t.Errorf("expected nil return type, got %v", fn.ReturnType)
+	if fn.SynReturnType != nil {
+		t.Errorf("expected nil return type, got %v", fn.SynReturnType)
 	}
 }
 

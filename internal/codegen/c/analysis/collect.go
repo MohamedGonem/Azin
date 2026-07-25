@@ -1,6 +1,9 @@
 package analysis
 
-import "github.com/azin-lang/Azin/internal/ast"
+import (
+	"github.com/azin-lang/Azin/internal/ast"
+	"github.com/azin-lang/Azin/internal/types"
+)
 
 func (a *Analyzer) CollectTypes(program *ast.Program) {
 	for _, stmt := range program.Statements {
@@ -16,11 +19,11 @@ func (a *Analyzer) CollectTypes(program *ast.Program) {
 			}
 
 			a.Structs[structName] = n
-			a.TypeDependencies[structName] = make(map[string]struct{})
+			a.TypeDependencies[n.SemaType] = make(map[*types.TypeInfo]struct{})
 
 			for _, field := range n.Fields {
-				if field.Type != nil && field.Type.Value != "" {
-					a.TypeDependencies[structName][field.Type.Value] = struct{}{}
+				if field.SemaType.IsNominal() {
+					a.TypeDependencies[n.SemaType][field.SemaType] = struct{}{}
 				}
 			}
 
@@ -95,14 +98,14 @@ func (a *Analyzer) collectTypesFromFunction(fn *ast.FuncStmt) {
 	}
 
 	// 1. Mark return type
-	if fn.ReturnType != nil && fn.ReturnType.Value != "" {
-		a.MarkTypeUsed(fn.ReturnType.Value)
+	if fn.SemaReturnType.IsNominal() {
+		a.MarkTypeUsed(fn.SemaReturnType)
 	}
 
 	// 2. Mark parameter types
 	for _, param := range fn.Params {
-		if param.Type != nil && param.Type.Value != "" {
-			a.MarkTypeUsed(param.Type.Value)
+		if param.SemaType.IsNominal() {
+			a.MarkTypeUsed(param.SemaType)
 		}
 	}
 
@@ -123,8 +126,8 @@ func (a *Analyzer) collectTypesFromStmt(stmt ast.Stmt) {
 
 	switch s := stmt.(type) {
 	case *ast.VarStmt:
-		if s.Type != nil && s.Type.Value != "" {
-			a.MarkTypeUsed(s.Type.Value)
+		if s.SemaType.IsNominal() {
+			a.MarkTypeUsed(s.SemaType)
 		}
 		if s.Value != nil {
 			a.collectTypesFromExpr(s.Value)
@@ -170,11 +173,11 @@ func (a *Analyzer) collectTypesFromExpr(expr ast.Expr) {
 			// Catches static enum or struct member access like `Color.Red`
 			if id, ok := node.Object.(*ast.Identifier); ok {
 				name := id.Value
-				if _, exists := a.Enums[name]; exists {
-					a.MarkTypeUsed(name)
+				if e, exists := a.Enums[name]; exists {
+					a.MarkTypeUsed(e.SemaType)
 				}
-				if _, exists := a.Structs[name]; exists {
-					a.MarkTypeUsed(name)
+				if s, exists := a.Structs[name]; exists {
+					a.MarkTypeUsed(s.SemaType)
 				}
 			}
 		}
