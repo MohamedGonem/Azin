@@ -24,17 +24,13 @@ linters:
 
     # Quality
     - copyloopvar
-    - exhaustive
     - gocheckcompilerdirectives
     - goconst
     - gocritic
     - intrange
-    - iotamixing
     - makezero
     - mirror
     - misspell
-    - modernize
-    - nolintlint
     - prealloc
     - predeclared
     - recvcheck

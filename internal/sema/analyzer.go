@@ -42,7 +42,9 @@ func mangleFunctionName(fn *ast.FuncStmt) string {
 	var name strings.Builder
 	name.WriteString(fn.Name.Value)
 	for _, param := range fn.Params {
-		name.WriteString("__" + param.SynType.Value)
+		if param.SynType != nil {
+			name.WriteString("__" + param.SynType.Value)
+		}
 	}
 
 	return name.String()
@@ -351,6 +353,9 @@ func (a *Analyzer) registerTopLevelSymbols(program *ast.Program) {
 			})
 
 			for _, param := range n.Params {
+				if param.SynType == nil {
+					continue
+				}
 				paramType := a.lookupType(param.SynType.Value)
 				if paramType == nil {
 					a.errorf(param.SynType, "unknown parameter type: %s", param.SynType.Value)
@@ -632,6 +637,11 @@ func (a *Analyzer) visitStatement(stmt ast.Stmt) {
 
 			if objectType.Kind != types.Nominal {
 				a.errorf(n.Value, "'%s' is not a struct", objectType.Name)
+				return
+			}
+
+			if sym := a.lookup(objectType.Name); sym != nil && sym.Kind == SymbolEnum {
+				a.errorf(n.Value, "'%s' is an enum and cannot be assigned to", objectType.Name)
 				return
 			}
 

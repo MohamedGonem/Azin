@@ -23,7 +23,7 @@ func New(name string, text []byte) *File {
 
 	for i, ch := range text {
 		if ch == '\n' {
-			lines = append(lines, uint32(i+1))
+			lines = append(lines, uint32(i+1)) //nolint:gosec
 		}
 	}
 

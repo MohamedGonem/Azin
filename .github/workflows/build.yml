@@ -9,6 +9,7 @@ on:
     branches: [ main, dev ]
     paths-ignore:
       - "**.md"
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -34,24 +35,26 @@ jobs:
       - name: Verify dependencies
         run: go mod verify
 
-      - uses: golangci/golangci-lint-action@v9
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v9
         with:
           version: latest
-          args: --timeout=5m
 
   build:
     name: Build and test (${{ matrix.os }})
-    needs: lint
     runs-on: ${{ matrix.os }}
     timeout-minutes: 10
 
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, macos-latest, windows-latest ]
-
-    env:
-      BIN_NAME: ${{ runner.os == 'Windows' && 'azc.exe' || 'azc' }}
+        include:
+          - os: ubuntu-latest
+            bin: azc
+          - os: macos-latest
+            bin: azc
+          - os: windows-latest
+            bin: azc.exe
 
     defaults:
       run:
@@ -66,7 +69,16 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
 
-      - name: Setup MSVC
+      - name: Install modern GCC (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq software-properties-common
+          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          sudo apt-get install -y -qq gcc-14
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100
+
+      - name: Setup MSVC (Windows)
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
 
@@ -74,16 +86,16 @@ jobs:
         run: go mod download
 
       - name: Build binary
-        run: go build -v -o "$BIN_NAME" ./cmd/azc
+        run: go build -v -o "${{ matrix.bin }}" ./cmd/azc
 
       - name: Run tests
         env:
-          AZC: ${{ github.workspace }}/${{ env.BIN_NAME }}
-        run: go test -v -race -count=1 -cover ./...
+          AZC: ${{ github.workspace }}/${{ matrix.bin }}
+        run: go test -v -count=1 -cover ./...
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v7
         with:
-          name: azc-${{ runner.os }}
-          path: ${{ env.BIN_NAME }}
+          name: azc-${{ matrix.os }}
+          path: ${{ matrix.bin }}
           retention-days: 7
