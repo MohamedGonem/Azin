@@ -640,6 +640,11 @@ func (a *Analyzer) visitStatement(stmt ast.Stmt) {
 				return
 			}
 
+			if sym := a.lookup(objectType.Name); sym != nil && sym.Kind == SymbolEnum {
+				a.errorf(n.Value, "'%s' is an enum and cannot be assigned to", objectType.Name)
+				return
+			}
+
 			strct := a.lookupStruct(objectType.Name)
 			if strct == nil {
 				a.errorf(n.Value, "'%s' is not a struct", objectType.Name)
