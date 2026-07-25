@@ -207,12 +207,8 @@ type ReturnStmt struct {
 func (*ReturnStmt) stmtNode()              {}
 func (r *ReturnStmt) TokenLiteral() string { return r.Token.Kind.String() }
 func (r *ReturnStmt) Pos() token.Position  { return r.Token.Position }
-func (r *ReturnStmt) Label() string {
-	if r.Value == nil {
-		return "return"
-	}
-
-	return "return " + r.Value.Label()
+func (*ReturnStmt) Label() string {
+	return "return"
 }
 
 type IfStmt struct {
