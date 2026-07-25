@@ -96,39 +96,6 @@ jobs:
       - name: Upload binary artifact
         uses: actions/upload-artifact@v7
         with:
-          name: azc-${{ runner.os }}
+          name: azc-${{ matrix.os }}
           path: ${{ matrix.bin }}
-          retention-days: 7
-
-  docs:
-    name: Generate documentation
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - uses: actions/checkout@v7
-
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: go.mod
-          cache: true
-
-      - name: Download dependencies
-        run: go mod download
-
-      - name: Install doc2go
-        run: go install go.abhg.dev/doc2go@latest
-
-      - name: Generate documentation
-        run: |
-          $(go env GOPATH)/bin/doc2go \
-            -internal \
-            -out build/docs/html \
-            ./...
-
-      - name: Upload docs artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: doc2go-html
-          path: build/docs/html
           retention-days: 7
