@@ -26,6 +26,4 @@ func TestLookupBuiltin(t *testing.T) {
 			tt.name, result, ok, tt.exceptedValue, tt.exceptedOk)
 		}
 	}
-	
-
 }
