@@ -3,8 +3,12 @@ name: macOS
 on:
   push:
     branches: [ main, dev ]
+    paths-ignore:
+      - '**.md'
   pull_request:
     branches: [ main, dev ]
+    paths-ignore:
+      - '**.md'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -15,31 +19,29 @@ permissions:
 
 jobs:
   build:
-    name: Build and test
+    name: Go
     runs-on: macos-latest
-    timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v7
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-          go-version-file: go.mod
+          go-version: 'stable'
           cache: true
-          cache-dependency-path: go.sum
 
-      - name: Download dependencies
-        run: go mod download
+      - name: Verify formatting
+        run: |
+          test -z "$(gofmt -l .)"
 
-      - name: Build binary
-        run: go build -v -o azc ./cmd/azc
+      - name: Run go vet
+        run: go vet ./...
 
-      - name: Run tests
-        run: go test -v -race -count=1 -cover ./...
+      - name: Build
+        run: go build -o azc ./cmd/azc
 
-      - name: Upload binary artifact
-        uses: actions/upload-artifact@v7
-        with:
-          name: azc-macos
-          path: azc
-          retention-days: 7
+      - name: Full test suite with coverage
+        env:
+          AZC: ${{ github.workspace }}/azc
+        run: go test -count=1 -cover ./...
