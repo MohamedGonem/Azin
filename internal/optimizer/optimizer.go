@@ -137,12 +137,6 @@ func (s *Scope) Invalidate(name string) {
 }
 
 func (s *Scope) ClearAll() {
-	// Wipe this scope's known values and stores (e.g. for Loops)
 	s.values = make(map[string]ast.Expr)
 	s.lastStore = make(map[string]ast.Stmt)
-
-	// Recursively wipe parent scopes
-	if s.parent != nil {
-		s.parent.ClearAll()
-	}
 }
