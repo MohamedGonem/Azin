@@ -22,6 +22,7 @@ type Expr interface {
 	Node
 	exprNode()
 	Equals(other Expr) bool
+	Type() *types.TypeInfo
 }
 
 // Stmt represents a statement node.
@@ -64,6 +65,7 @@ func (b *BadExpr) TokenLiteral() string { return b.Token.Kind.String() }
 func (b *BadExpr) Pos() token.Position  { return b.Token.Position }
 func (*BadExpr) Label() string          { return "BadExpr" }
 func (*BadExpr) Equals(other Expr) bool { return false }
+func (*BadExpr) Type() *types.TypeInfo  { return types.ErrorType() }
 
 type BadStmt struct {
 	Token token.Token
@@ -205,8 +207,12 @@ type ReturnStmt struct {
 func (*ReturnStmt) stmtNode()              {}
 func (r *ReturnStmt) TokenLiteral() string { return r.Token.Kind.String() }
 func (r *ReturnStmt) Pos() token.Position  { return r.Token.Position }
-func (*ReturnStmt) Label() string {
-	return "return"
+func (r *ReturnStmt) Label() string {
+	if r.Value == nil {
+		return "return"
+	}
+
+	return "return " + r.Value.Label()
 }
 
 type IfStmt struct {
@@ -322,11 +328,15 @@ func (f *FieldDecl) Label() string {
 type Identifier struct {
 	Token token.Token
 	Value string
+
+	// SemaType contains the type information for the identifier, set after semantic analysis.
+	SemaType *types.TypeInfo
 }
 
-func (*Identifier) exprNode()              {}
-func (i *Identifier) TokenLiteral() string { return i.Value }
-func (i *Identifier) Pos() token.Position  { return i.Token.Position }
+func (*Identifier) exprNode()               {}
+func (i *Identifier) TokenLiteral() string  { return i.Value }
+func (i *Identifier) Pos() token.Position   { return i.Token.Position }
+func (i *Identifier) Type() *types.TypeInfo { return i.SemaType }
 func (i *Identifier) Label() string {
 	return i.Value
 }
@@ -340,9 +350,10 @@ type IntegerLiteral struct {
 	Value int64
 }
 
-func (*IntegerLiteral) exprNode()              {}
-func (i *IntegerLiteral) TokenLiteral() string { return fmt.Sprintf("%d", i.Value) }
-func (i *IntegerLiteral) Pos() token.Position  { return i.Token.Position }
+func (*IntegerLiteral) exprNode()               {}
+func (i *IntegerLiteral) TokenLiteral() string  { return fmt.Sprintf("%d", i.Value) }
+func (i *IntegerLiteral) Pos() token.Position   { return i.Token.Position }
+func (i *IntegerLiteral) Type() *types.TypeInfo { return types.IntType() }
 func (i *IntegerLiteral) Label() string {
 	return strconv.FormatInt(i.Value, 10)
 }
@@ -356,9 +367,10 @@ type FloatLiteral struct {
 	Value float64
 }
 
-func (*FloatLiteral) exprNode()              {}
-func (f *FloatLiteral) TokenLiteral() string { return fmt.Sprintf("%f", f.Value) }
-func (f *FloatLiteral) Pos() token.Position  { return f.Token.Position }
+func (*FloatLiteral) exprNode()               {}
+func (f *FloatLiteral) TokenLiteral() string  { return fmt.Sprintf("%f", f.Value) }
+func (f *FloatLiteral) Pos() token.Position   { return f.Token.Position }
+func (f *FloatLiteral) Type() *types.TypeInfo { return types.FloatType() }
 func (f *FloatLiteral) Label() string {
 	return strconv.FormatFloat(f.Value, 'g', -1, 64)
 }
@@ -372,9 +384,10 @@ type StringLiteral struct {
 	Value string
 }
 
-func (*StringLiteral) exprNode()              {}
-func (s *StringLiteral) TokenLiteral() string { return s.Value }
-func (s *StringLiteral) Pos() token.Position  { return s.Token.Position }
+func (*StringLiteral) exprNode()               {}
+func (s *StringLiteral) TokenLiteral() string  { return s.Value }
+func (s *StringLiteral) Pos() token.Position   { return s.Token.Position }
+func (s *StringLiteral) Type() *types.TypeInfo { return types.StringType() }
 func (s *StringLiteral) Label() string {
 	return strconv.Quote(s.Value)
 }
@@ -388,9 +401,10 @@ type CharacterLiteral struct {
 	Value rune
 }
 
-func (*CharacterLiteral) exprNode()              {}
-func (c *CharacterLiteral) TokenLiteral() string { return string(c.Value) }
-func (c *CharacterLiteral) Pos() token.Position  { return c.Token.Position }
+func (*CharacterLiteral) exprNode()               {}
+func (c *CharacterLiteral) TokenLiteral() string  { return string(c.Value) }
+func (c *CharacterLiteral) Pos() token.Position   { return c.Token.Position }
+func (c *CharacterLiteral) Type() *types.TypeInfo { return types.CharType() }
 func (c *CharacterLiteral) Label() string {
 	return strconv.QuoteRune(c.Value)
 }
@@ -408,7 +422,8 @@ func (*BooleanLiteral) exprNode() {}
 func (b *BooleanLiteral) TokenLiteral() string {
 	return strconv.FormatBool(b.Value)
 }
-func (b *BooleanLiteral) Pos() token.Position { return b.Token.Position }
+func (b *BooleanLiteral) Pos() token.Position   { return b.Token.Position }
+func (b *BooleanLiteral) Type() *types.TypeInfo { return types.BoolType() }
 func (b *BooleanLiteral) Label() string {
 	return strconv.FormatBool(b.Value)
 }
@@ -421,11 +436,15 @@ type CallExpr struct {
 	Callee       Expr
 	Args         []Expr
 	ResolvedName string
+
+	// SemaReturnType contains the return type of the function call, set after semantic analysis.
+	SemaReturnType *types.TypeInfo
 }
 
-func (*CallExpr) exprNode()              {}
-func (c *CallExpr) TokenLiteral() string { return c.Callee.TokenLiteral() }
-func (c *CallExpr) Pos() token.Position  { return c.Callee.Pos() }
+func (*CallExpr) exprNode()               {}
+func (c *CallExpr) TokenLiteral() string  { return c.Callee.TokenLiteral() }
+func (c *CallExpr) Pos() token.Position   { return c.Callee.Pos() }
+func (c *CallExpr) Type() *types.TypeInfo { return c.SemaReturnType }
 func (c *CallExpr) Label() string {
 	switch callee := c.Callee.(type) {
 	case *Identifier:
@@ -455,11 +474,15 @@ type BinaryExpr struct {
 	Left     Expr
 	Operator token.Token
 	Right    Expr
+
+	// SemaResultType contains the result type of the binary operation, set after semantic analysis.
+	SemaResultType *types.TypeInfo
 }
 
-func (*BinaryExpr) exprNode()              {}
-func (b *BinaryExpr) TokenLiteral() string { return b.Operator.Kind.String() }
-func (b *BinaryExpr) Pos() token.Position  { return b.Left.Pos() }
+func (*BinaryExpr) exprNode()               {}
+func (b *BinaryExpr) TokenLiteral() string  { return b.Operator.Kind.String() }
+func (b *BinaryExpr) Pos() token.Position   { return b.Left.Pos() }
+func (b *BinaryExpr) Type() *types.TypeInfo { return b.SemaResultType }
 func (b *BinaryExpr) Label() string {
 	return b.Operator.Kind.String()
 }
@@ -473,11 +496,15 @@ func (b *BinaryExpr) Equals(other Expr) bool {
 type MemberExpr struct {
 	Object   Expr
 	Property *Identifier
+
+	// SemaResultType contains the type of the member access, set after semantic analysis.
+	SemaResultType *types.TypeInfo
 }
 
-func (*MemberExpr) exprNode()              {}
-func (m *MemberExpr) TokenLiteral() string { return m.Property.TokenLiteral() }
-func (m *MemberExpr) Pos() token.Position  { return m.Object.Pos() }
+func (*MemberExpr) exprNode()               {}
+func (m *MemberExpr) TokenLiteral() string  { return m.Property.TokenLiteral() }
+func (m *MemberExpr) Pos() token.Position   { return m.Object.Pos() }
+func (m *MemberExpr) Type() *types.TypeInfo { return m.SemaResultType }
 func (m *MemberExpr) Label() string {
 	if id, ok := m.Object.(*Identifier); ok {
 		return id.Value + "." + m.Property.Value

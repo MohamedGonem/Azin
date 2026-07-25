@@ -776,39 +776,30 @@ func (a *Analyzer) inferFunctionReturnType(fn *ast.FuncStmt) {
 }
 
 func (a *Analyzer) inferExprType(expr ast.Expr) *types.TypeInfo {
+	if expr != nil && expr.Type().IsComplete() {
+		// Type has already been inferred, so we can return it directly.
+		return expr.Type()
+	}
+
 	switch n := expr.(type) {
-
-	case *ast.BadExpr:
-		return types.ErrorType()
-
-	case *ast.IntegerLiteral:
-		return types.IntType()
-
-	case *ast.FloatLiteral:
-		return types.FloatType()
-
-	case *ast.CharacterLiteral:
-		return types.CharType()
-
-	case *ast.StringLiteral:
-		return types.StringType()
-
-	case *ast.BooleanLiteral:
-		return types.BoolType()
-
 	case *ast.Identifier:
-		if t := a.lookupType(n.Value); t != nil {
-			return t
+		resultType := a.lookupType(n.Value)
+		if resultType == nil {
+			resultType = types.ErrorType()
+			a.errorf(n, "unknown identifier: %s", n.Value)
 		}
 
-		a.errorf(n, "unknown identifier: %s", n.Value)
-		return types.ErrorType()
+		n.SemaType = resultType
+		return resultType
 
 	case *ast.CallExpr:
 		sym := a.resolveCallExpr(n)
+
+		n.SemaReturnType = types.UnknownType()
 		if sym == nil {
 			// FIXME: any function returning a C call's result will fail. When are we creating a signature table for the headers?
 			// Or better yet, add actual header parsing...
+			n.SemaReturnType = types.ErrorType()
 			return types.ErrorType()
 		}
 
@@ -816,10 +807,12 @@ func (a *Analyzer) inferExprType(expr ast.Expr) *types.TypeInfo {
 			return types.UnknownType()
 		}
 
-		if sym.Type == nil || sym.Type.IsUnknown() {
+		if !sym.Type.IsComplete() {
+			// If the function's return type is not yet inferred, we need to infer it now.
 			a.inferFunctionReturnType(sym.Function)
 		}
 
+		n.SemaReturnType = sym.Type
 		return sym.Type
 
 	case *ast.BinaryExpr:
@@ -827,6 +820,7 @@ func (a *Analyzer) inferExprType(expr ast.Expr) *types.TypeInfo {
 		right := a.inferExprType(n.Right)
 
 		if !left.IsValid() || !right.IsValid() {
+			n.SemaResultType = types.ErrorType()
 			return types.ErrorType()
 		}
 
@@ -839,13 +833,17 @@ func (a *Analyzer) inferExprType(expr ast.Expr) *types.TypeInfo {
 					"operator '%s' requires numeric operands",
 					n.TokenLiteral(),
 				)
-				return nil
+
+				n.SemaResultType = types.ErrorType()
+				return types.ErrorType()
 			}
 
 			if left.IsFloat() || right.IsFloat() {
+				n.SemaResultType = types.FloatType()
 				return types.FloatType()
 			}
 
+			n.SemaResultType = types.IntType()
 			return types.IntType()
 
 		case token.EqualEqual, token.BangEqual,
@@ -859,12 +857,15 @@ func (a *Analyzer) inferExprType(expr ast.Expr) *types.TypeInfo {
 					left.Name,
 					right.Name,
 				)
+				n.SemaResultType = types.ErrorType()
 				return types.ErrorType()
 			}
 
+			n.SemaResultType = types.BoolType()
 			return types.BoolType()
 		}
 
+		n.SemaResultType = types.ErrorType()
 		return types.ErrorType()
 
 	case *ast.MemberExpr:
@@ -873,41 +874,49 @@ func (a *Analyzer) inferExprType(expr ast.Expr) *types.TypeInfo {
 			if sym := a.lookup(id.Value); sym != nil && sym.Kind == SymbolEnum {
 				for _, variant := range sym.Enum.Variants {
 					if variant.Value == n.Property.Value {
-						return types.NominalType(sym.Enum.Name.Value)
+						n.SemaResultType = types.NominalType(sym.Enum.Name.Value)
+						return n.SemaResultType
 					}
 				}
 
 				a.errorf(n.Property, "enum '%s' has no variant '%s'", sym.Enum.Name.Value, n.Property.Value)
-				return types.ErrorType()
+				n.SemaResultType = types.ErrorType()
+				return n.SemaResultType
 			}
 		}
 
 		objectType := a.inferExprType(n.Object)
 		if !objectType.IsValid() {
-			return types.ErrorType()
+			n.SemaResultType = types.ErrorType()
+			return n.SemaResultType
 		}
 
 		if objectType.Kind != types.Nominal {
 			a.errorf(n.Object, "'%s' is not a struct", objectType.Name)
-			return types.ErrorType()
+			n.SemaResultType = types.ErrorType()
+			return n.SemaResultType
 		}
 
 		strct := a.lookupStruct(objectType.Name)
 		if strct == nil {
 			a.errorf(n.Object, "'%s' is not a struct", objectType.Name)
-			return types.ErrorType()
+			n.SemaResultType = types.ErrorType()
+			return n.SemaResultType
 		}
 
 		for _, field := range strct.Fields {
 			if field.Name.Value == n.Property.Value {
-				return field.SemaType
+				n.SemaResultType = field.SemaType
+				return n.SemaResultType
 			}
 		}
 
 		a.errorf(n.Property, "struct '%s' has no field '%s'", strct.Name.Value, n.Property.Value)
-		return types.ErrorType()
+		n.SemaResultType = types.ErrorType()
+		return n.SemaResultType
 	}
 
+	a.errorf(expr, "internal compiler error: cannot infer type for expression")
 	return types.ErrorType()
 }
 
