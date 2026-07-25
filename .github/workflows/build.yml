@@ -9,6 +9,7 @@ on:
     branches: [ main, dev ]
     paths-ignore:
       - "**.md"
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -47,10 +48,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, macos-latest, windows-latest ]
-
-    env:
-      BIN_NAME: ${{ runner.os == 'Windows' && 'azc.exe' || 'azc' }}
+        include:
+          - os: ubuntu-latest
+            bin: azc
+          - os: macos-latest
+            bin: azc
+          - os: windows-latest
+            bin: azc.exe
 
     defaults:
       run:
@@ -82,16 +86,16 @@ jobs:
         run: go mod download
 
       - name: Build binary
-        run: go build -v -o "$BIN_NAME" ./cmd/azc
+        run: go build -v -o "${{ matrix.bin }}" ./cmd/azc
 
       - name: Run tests
         env:
-          AZC: ${{ github.workspace }}/${{ env.BIN_NAME }}
+          AZC: ${{ github.workspace }}/${{ matrix.bin }}
         run: go test -v -count=1 -cover ./...
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v7
         with:
-          name: azc-${{ runner.os }}
-          path: ${{ env.BIN_NAME }}
+          name: azc-${{ matrix.os }}
+          path: ${{ matrix.bin }}
           retention-days: 7
