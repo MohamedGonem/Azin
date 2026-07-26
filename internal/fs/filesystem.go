@@ -54,10 +54,6 @@ func ReadSourceFile(path string, ignoreExtension bool) ([]byte, error) {
 		case errors.Is(err, os.ErrInvalid):
 			return nil, fmt.Errorf("invalid source file %q", path)
 		default:
-			if errors.Is(err, os.ErrExist) {
-				// Unreachable for ReadFile, but left out intentionally.
-			}
-
 			if info, statErr := os.Stat(path); statErr == nil && info.IsDir() {
 				return nil, fmt.Errorf("%q is a directory", path)
 			}
