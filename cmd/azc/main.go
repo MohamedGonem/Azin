@@ -5,17 +5,17 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/azin-lang/Azin/internal/ast"
 	"github.com/azin-lang/Azin/internal/compiler"
-	"github.com/azin-lang/Azin/internal/diagnostics"
 	"github.com/azin-lang/Azin/internal/fs"
-	"github.com/azin-lang/Azin/internal/lexer"
-	"github.com/azin-lang/Azin/internal/parser"
-	"github.com/azin-lang/Azin/internal/source"
-	"github.com/azin-lang/Azin/internal/token"
+	"github.com/azin-lang/Azin/pkg/ast"
+	"github.com/azin-lang/Azin/pkg/diagnostics"
+	"github.com/azin-lang/Azin/pkg/lexer"
+	"github.com/azin-lang/Azin/pkg/parser"
+	"github.com/azin-lang/Azin/pkg/source"
+	"github.com/azin-lang/Azin/pkg/token"
 )
 
-const Version = "0.2.1"
+const Version = "0.2.2"
 
 var (
 	debug           = flag.Bool("debug", false, "Enable debug output")
