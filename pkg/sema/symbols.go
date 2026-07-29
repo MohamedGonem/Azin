@@ -1,8 +1,8 @@
 package sema
 
 import (
-	"github.com/azin-lang/Azin/internal/ast"
-	"github.com/azin-lang/Azin/internal/types"
+	"github.com/azin-lang/Azin/pkg/ast"
+	"github.com/azin-lang/Azin/pkg/types"
 )
 
 // SymbolKind represents the kind of a symbol (variable, function, struct).

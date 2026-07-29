@@ -1,8 +1,10 @@
 package lexer
 
-import "github.com/azin-lang/Azin/internal/token"
+import (
+	token2 "github.com/azin-lang/Azin/pkg/token"
+)
 
-func (l *Lexer) nextToken() token.Token {
+func (l *Lexer) nextToken() token2.Token {
 	l.skipTrivia()
 
 	if l.eof() {
@@ -14,13 +16,13 @@ func (l *Lexer) nextToken() token.Token {
 
 	switch {
 	case ch == '\n':
-		return l.emit(token.Newline, start)
+		return l.emit(token2.Newline, start)
 
 	case ch == '\r':
 		if l.peek() == '\n' {
 			l.advance() // consume the LF of CRLF
 		}
-		return l.emit(token.Newline, start)
+		return l.emit(token2.Newline, start)
 
 	case ch == '"':
 		return l.lexString(start)

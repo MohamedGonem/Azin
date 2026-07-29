@@ -1,7 +1,7 @@
 package optimizer
 
 import (
-	"github.com/azin-lang/Azin/internal/ast"
+	"github.com/azin-lang/Azin/pkg/ast"
 )
 
 func (o *Optimizer) optimizeExpr(expr ast.Expr) ast.Expr {

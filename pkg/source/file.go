@@ -7,7 +7,7 @@ import (
 	"sort"
 	"unicode/utf8"
 
-	"github.com/azin-lang/Azin/internal/token"
+	"github.com/azin-lang/Azin/pkg/token"
 )
 
 // File holds the contents and line structure of a parsed source file.

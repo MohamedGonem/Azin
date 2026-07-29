@@ -2,7 +2,7 @@
 package optimizer
 
 import (
-	"github.com/azin-lang/Azin/internal/ast"
+	"github.com/azin-lang/Azin/pkg/ast"
 )
 
 // Optimizer holds the global state for the optimization pass.

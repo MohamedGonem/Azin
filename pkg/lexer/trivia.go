@@ -1,6 +1,8 @@
 package lexer
 
-import "github.com/azin-lang/Azin/internal/token"
+import (
+	"github.com/azin-lang/Azin/pkg/token"
+)
 
 // skipTrivia consumes whitespace and comments, advancing the cursor
 // to the next meaningful token.

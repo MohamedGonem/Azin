@@ -1,6 +1,8 @@
 package optimizer
 
-import "github.com/azin-lang/Azin/internal/ast"
+import (
+	"github.com/azin-lang/Azin/pkg/ast"
+)
 
 func (o *Optimizer) optimizeStatements(stmts []ast.Stmt) []ast.Stmt {
 	if len(stmts) == 0 {

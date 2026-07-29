@@ -6,8 +6,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/azin-lang/Azin/internal/source"
-	"github.com/azin-lang/Azin/internal/token"
+	"github.com/azin-lang/Azin/pkg/source"
+	"github.com/azin-lang/Azin/pkg/token"
 )
 
 const defaultErrorLimit = 50

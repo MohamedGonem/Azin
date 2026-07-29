@@ -1,6 +1,8 @@
 package optimizer
 
-import "github.com/azin-lang/Azin/internal/ast"
+import (
+	"github.com/azin-lang/Azin/pkg/ast"
+)
 
 type binaryRule func(*ast.BinaryExpr) ast.Expr
 

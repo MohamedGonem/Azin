@@ -1,6 +1,8 @@
 package analysis
 
-import "github.com/azin-lang/Azin/internal/ast"
+import (
+	"github.com/azin-lang/Azin/pkg/ast"
+)
 
 func (a *Analyzer) visitMember(fn string, expr *ast.MemberExpr) {
 	if id, ok := expr.Object.(*ast.Identifier); ok {

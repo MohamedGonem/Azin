@@ -3,8 +3,8 @@ package analysis
 import (
 	"path/filepath"
 
-	"github.com/azin-lang/Azin/internal/ast"
-	"github.com/azin-lang/Azin/internal/types"
+	"github.com/azin-lang/Azin/pkg/ast"
+	"github.com/azin-lang/Azin/pkg/types"
 )
 
 // registerVariable adds a local variable to the scope tracker initialized with zero usages.

@@ -3,7 +3,7 @@ package token_test
 import (
 	"testing"
 
-	"github.com/azin-lang/Azin/internal/token"
+	"github.com/azin-lang/Azin/pkg/token"
 )
 
 func TestKindDisplayName(t *testing.T) {

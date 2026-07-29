@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/azin-lang/Azin/internal/source"
-	"github.com/azin-lang/Azin/internal/token"
+	"github.com/azin-lang/Azin/pkg/source"
+	token2 "github.com/azin-lang/Azin/pkg/token"
 )
 
 func TestNewFile(t *testing.T) {
@@ -105,7 +105,7 @@ func TestSlice(t *testing.T) {
 
 func TestText(t *testing.T) {
 	f := source.New("test.az", []byte("var x: int"))
-	tok := token.Token{Kind: token.Identifier, Position: token.Position{Offset: 4}, Length: 1}
+	tok := token2.Token{Kind: token2.Identifier, Position: token2.Position{Offset: 4}, Length: 1}
 	if got := string(f.Text(tok)); got != "x" {
 		t.Errorf("Text(identifier) = %q, want %q", got, "x")
 	}
@@ -166,9 +166,9 @@ func TestEOF(t *testing.T) {
 
 func TestFormatToken(t *testing.T) {
 	f := source.New("test.az", []byte("fn main()"))
-	tok := token.Token{
-		Kind:     token.Identifier,
-		Position: token.Position{Offset: 3},
+	tok := token2.Token{
+		Kind:     token2.Identifier,
+		Position: token2.Position{Offset: 3},
 		Length:   4,
 	}
 	got := f.FormatToken(tok)

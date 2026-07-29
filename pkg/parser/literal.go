@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/azin-lang/Azin/internal/ast"
+	"github.com/azin-lang/Azin/pkg/ast"
 )
 
 func (p *Parser) parseIntegerLiteral() *ast.IntegerLiteral {

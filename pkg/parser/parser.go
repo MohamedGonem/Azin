@@ -3,12 +3,12 @@ package parser
 import (
 	"slices"
 
-	"github.com/azin-lang/Azin/internal/ast"
-	"github.com/azin-lang/Azin/internal/token"
+	"github.com/azin-lang/Azin/pkg/ast"
+	token2 "github.com/azin-lang/Azin/pkg/token"
 )
 
 type ErrorReporter interface {
-	ReportError(pos token.Position, length int, format string, args ...any)
+	ReportError(pos token2.Position, length int, format string, args ...any)
 	Err() error
 }
 
@@ -27,17 +27,17 @@ const (
 
 type Parser struct {
 	source  string
-	tokens  []token.Token
+	tokens  []token2.Token
 	current int
 	diag    ErrorReporter
 }
 
-func Parse(source string, tokens []token.Token, diag ErrorReporter) (*ast.Program, error) {
+func Parse(source string, tokens []token2.Token, diag ErrorReporter) (*ast.Program, error) {
 	p := New(source, tokens, diag)
 	return p.ParseProgram(), p.diag.Err()
 }
 
-func New(source string, tokens []token.Token, diag ErrorReporter) *Parser {
+func New(source string, tokens []token2.Token, diag ErrorReporter) *Parser {
 	return &Parser{
 		source: source,
 		tokens: tokens,
@@ -56,7 +56,7 @@ func (p *Parser) synchronize() {
 	p.advance()
 
 	for !p.isAtEnd() {
-		if p.previous().Kind == token.Newline || p.previous().Kind == token.Semicolon {
+		if p.previous().Kind == token2.Newline || p.previous().Kind == token2.Semicolon {
 			return
 		}
 
@@ -67,7 +67,7 @@ func (p *Parser) synchronize() {
 	}
 }
 
-func (p *Parser) lexeme(tok token.Token) string {
+func (p *Parser) lexeme(tok token2.Token) string {
 	start := int(tok.Position.Offset)
 	end := start + int(tok.Length)
 	if start < 0 {
@@ -82,15 +82,15 @@ func (p *Parser) lexeme(tok token.Token) string {
 	return p.source[start:end]
 }
 
-func (p *Parser) reportError(tok token.Token, format string, args ...any) {
+func (p *Parser) reportError(tok token2.Token, format string, args ...any) {
 	p.diag.ReportError(tok.Position, int(tok.Length), format, args...)
 }
 
-func badStmt(tok token.Token) *ast.BadStmt {
+func badStmt(tok token2.Token) *ast.BadStmt {
 	return &ast.BadStmt{Token: tok}
 }
 
-func badExpr(tok token.Token) *ast.BadExpr {
+func badExpr(tok token2.Token) *ast.BadExpr {
 	return &ast.BadExpr{Token: tok}
 }
 
@@ -104,7 +104,7 @@ func isBadExpr(expr ast.Expr) bool {
 	return ok
 }
 
-func (p *Parser) expect(kind token.Kind, context string) (token.Token, bool) {
+func (p *Parser) expect(kind token2.Kind, context string) (token2.Token, bool) {
 	if p.check(kind) {
 		return p.advance(), true
 	}
@@ -121,7 +121,7 @@ func (p *Parser) expect(kind token.Kind, context string) (token.Token, bool) {
 	return got, false
 }
 
-func (p *Parser) parseBlock(until ...token.Kind) []ast.Stmt {
+func (p *Parser) parseBlock(until ...token2.Kind) []ast.Stmt {
 	var body []ast.Stmt
 	for {
 		p.skipNewlines()
@@ -136,18 +136,18 @@ func (p *Parser) parseBlock(until ...token.Kind) []ast.Stmt {
 }
 
 func (p *Parser) skipNewlines() {
-	for p.match(token.Newline) {
+	for p.match(token2.Newline) {
 	}
 }
 
-func (p *Parser) peek() token.Token {
+func (p *Parser) peek() token2.Token {
 	if p.current >= len(p.tokens) {
 		return p.tokens[len(p.tokens)-1]
 	}
 	return p.tokens[p.current]
 }
 
-func (p *Parser) previous() token.Token {
+func (p *Parser) previous() token2.Token {
 	if p.current == 0 {
 		return p.tokens[0]
 	}
@@ -158,28 +158,28 @@ func (p *Parser) isAtEnd() bool {
 	if p.current >= len(p.tokens) {
 		return true
 	}
-	return p.tokens[p.current].Kind == token.EOF
+	return p.tokens[p.current].Kind == token2.EOF
 }
 
-func (p *Parser) advance() token.Token {
+func (p *Parser) advance() token2.Token {
 	if !p.isAtEnd() {
 		p.current++
 	}
 	return p.previous()
 }
 
-func (p *Parser) check(kind token.Kind) bool {
+func (p *Parser) check(kind token2.Kind) bool {
 	return p.peek().Kind == kind
 }
 
-func (p *Parser) checkAny(kinds ...token.Kind) bool {
+func (p *Parser) checkAny(kinds ...token2.Kind) bool {
 	if p.isAtEnd() {
 		return false
 	}
 	return slices.Contains(kinds, p.peek().Kind)
 }
 
-func (p *Parser) match(kinds ...token.Kind) bool {
+func (p *Parser) match(kinds ...token2.Kind) bool {
 	if p.isAtEnd() {
 		return false
 	}
@@ -193,13 +193,13 @@ func (p *Parser) match(kinds ...token.Kind) bool {
 //nolint:unparam
 func (p *Parser) consumeStatementEnd() bool {
 	switch p.peek().Kind {
-	case token.Semicolon:
+	case token2.Semicolon:
 		p.advance()
 		return true
-	case token.Newline:
+	case token2.Newline:
 		p.skipNewlines()
 		return true
-	case token.EOF, token.KwEnd, token.KwElse:
+	case token2.EOF, token2.KwEnd, token2.KwElse:
 		return true
 	default:
 		p.reportError(p.peek(), "expected end of statement (newline or ';')")
@@ -207,42 +207,42 @@ func (p *Parser) consumeStatementEnd() bool {
 	}
 }
 
-func isBuiltinType(kind token.Kind) bool {
+func isBuiltinType(kind token2.Kind) bool {
 	switch kind {
-	case token.KwUnit, token.KwInt, token.KwFloat, token.KwString, token.KwChar, token.KwBool:
+	case token2.KwUnit, token2.KwInt, token2.KwFloat, token2.KwString, token2.KwChar, token2.KwBool:
 		return true
 	default:
 		return false
 	}
 }
 
-func isSyncPoint(kind token.Kind) bool {
+func isSyncPoint(kind token2.Kind) bool {
 	switch kind {
-	case token.KwFn, token.KwStruct, token.KwEnum, token.KwVar, token.KwIf, token.KwLoop,
-		token.KwReturn, token.KwElse, token.KwImportC, token.KwDefer, token.KwEnd:
+	case token2.KwFn, token2.KwStruct, token2.KwEnum, token2.KwVar, token2.KwIf, token2.KwLoop,
+		token2.KwReturn, token2.KwElse, token2.KwImportC, token2.KwDefer, token2.KwEnd:
 		return true
 	default:
 		return false
 	}
 }
 
-func getPrecedence(kind token.Kind) int {
+func getPrecedence(kind token2.Kind) int {
 	switch kind {
-	case token.LeftParen:
+	case token2.LeftParen:
 		return PrecCall
-	case token.Dot:
+	case token2.Dot:
 		return PrecMember
-	case token.Star, token.Slash:
+	case token2.Star, token2.Slash:
 		return PrecFactor
-	case token.Plus, token.Minus:
+	case token2.Plus, token2.Minus:
 		return PrecTerm
-	case token.LessLess, token.GreaterGreater:
+	case token2.LessLess, token2.GreaterGreater:
 		return PrecShift
-	case token.Less, token.LessEqual, token.Greater, token.GreaterEqual:
+	case token2.Less, token2.LessEqual, token2.Greater, token2.GreaterEqual:
 		return PrecComparison
-	case token.EqualEqual, token.BangEqual:
+	case token2.EqualEqual, token2.BangEqual:
 		return PrecEquality
-	case token.Ampersand:
+	case token2.Ampersand:
 		return PrecBitwiseAnd
 	default:
 		return PrecLowest

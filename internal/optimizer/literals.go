@@ -1,6 +1,8 @@
 package optimizer
 
-import "github.com/azin-lang/Azin/internal/ast"
+import (
+	"github.com/azin-lang/Azin/pkg/ast"
+)
 
 func intLit(v int64) *ast.IntegerLiteral {
 	return &ast.IntegerLiteral{Value: v}

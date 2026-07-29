@@ -1,11 +1,13 @@
 //nolint:unused,unparam
 package lexer
 
-import "github.com/azin-lang/Azin/internal/token"
+import (
+	token2 "github.com/azin-lang/Azin/pkg/token"
+)
 
-func (l *Lexer) eofToken() token.Token {
-	return token.Token{
-		Kind:     token.EOF,
+func (l *Lexer) eofToken() token2.Token {
+	return token2.Token{
+		Kind:     token2.EOF,
 		Position: l.pos(),
 	}
 }
@@ -72,21 +74,21 @@ func (l *Lexer) consumeWhile(pred func(rune) bool) {
 	}
 }
 
-func (l *Lexer) emit(kind token.Kind, start token.Position) token.Token {
-	return token.Token{
+func (l *Lexer) emit(kind token2.Kind, start token2.Position) token2.Token {
+	return token2.Token{
 		Kind:     kind,
 		Position: start,
 		Length:   l.cursor - start.Offset,
 	}
 }
 
-func (l *Lexer) either(ch rune, ifMatch, otherwise token.Kind, start token.Position) token.Token {
+func (l *Lexer) either(ch rune, ifMatch, otherwise token2.Kind, start token2.Position) token2.Token {
 	if l.match(ch) {
 		return l.emit(ifMatch, start)
 	}
 	return l.emit(otherwise, start)
 }
 
-func (l *Lexer) pos() token.Position {
-	return token.Position{Offset: l.cursor}
+func (l *Lexer) pos() token2.Position {
+	return token2.Position{Offset: l.cursor}
 }

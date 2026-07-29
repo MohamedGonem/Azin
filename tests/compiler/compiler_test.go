@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/azin-lang/Azin/internal/compiler"
-	"github.com/azin-lang/Azin/internal/source"
+	"github.com/azin-lang/Azin/pkg/source"
 )
 
 func TestCompileEmitC(t *testing.T) {

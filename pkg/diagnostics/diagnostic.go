@@ -5,7 +5,7 @@ package diagnostics
 import (
 	"fmt"
 
-	"github.com/azin-lang/Azin/internal/token"
+	"github.com/azin-lang/Azin/pkg/token"
 	"github.com/fatih/color"
 )
 

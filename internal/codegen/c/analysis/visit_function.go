@@ -1,6 +1,8 @@
 package analysis
 
-import "github.com/azin-lang/Azin/internal/ast"
+import (
+	"github.com/azin-lang/Azin/pkg/ast"
+)
 
 func (a *Analyzer) visitFunction(fn *ast.FuncStmt) {
 	name := FunctionName(fn)
