@@ -190,60 +190,63 @@ func compileSingle(file *source.File, outputPath string, opts Options) error {
 }
 
 func compileMulti(files []*source.File, outputPath string, opts Options) error {
-	if opts.EmitC {
-		var cCode strings.Builder
-		for _, file := range files {
-			diag := diagnostics.New(file)
-			program, err := parseSource(file, diag)
-			if err != nil {
-				return err
-			}
-			analyzer := sema.New(diag)
-			if err := analyzer.Analyze(program); err != nil {
-				return err
-			}
-			optimizer.Optimize(program)
-			code, err := transpileToC(program)
-			if err != nil {
-				return err
-			}
-			cCode.WriteString(code)
-			cCode.WriteByte('\n')
-		}
-		return writeCOutput(cCode.String(), outputPath)
+	merged := mergeSources(files)
+	diag := diagnostics.New(merged)
+
+	program, err := parseSource(merged, diag)
+	if err != nil {
+		return err
 	}
 
-	var tmpPaths []string
-	defer func() {
-		for _, p := range tmpPaths {
-			os.Remove(p)
-		}
-	}()
+	analyzer := sema.New(diag)
+	if err := analyzer.Analyze(program); err != nil {
+		return err
+	}
 
-	for _, file := range files {
-		diag := diagnostics.New(file)
-		program, err := parseSource(file, diag)
-		if err != nil {
-			return err
-		}
-		analyzer := sema.New(diag)
-		if err := analyzer.Analyze(program); err != nil {
-			return err
-		}
-		optimizer.Optimize(program)
-		cCode, err := transpileToC(program)
-		if err != nil {
-			return err
-		}
-		tmpPath, err := writeToTempFile(cCode)
-		if err != nil {
-			return err
-		}
-		tmpPaths = append(tmpPaths, tmpPath)
+	optimizer.Optimize(program)
+	cCode, err := transpileToC(program)
+	if err != nil {
+		return err
+	}
+
+	if opts.EmitC {
+		return writeCOutput(cCode, outputPath)
 	}
 
 	exeName := resolveExeName(outputPath)
-	return runCompiler(tmpPaths, exeName, opts)
+	tmpPath, err := writeToTempFile(cCode)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		os.Remove(tmpPath)
+	}()
+
+	return runCompiler([]string{tmpPath}, exeName, opts)
+}
+
+func mergeSources(files []*source.File) *source.File {
+	if len(files) == 1 {
+		return files[0]
+	}
+
+	var names []string
+	var totalLen int
+	for _, f := range files {
+		names = append(names, f.Name())
+		totalLen += int(f.Len())
+	}
+
+	text := make([]byte, 0, totalLen+len(files))
+	for i, f := range files {
+		if i > 0 {
+			text = append(text, '\n')
+		}
+		text = append(text, f.Slice(0, f.Len())...)
+	}
+
+	displayName := strings.Join(names, " + ")
+	return source.New(displayName, text)
 }
 
 func parseSource(file *source.File, diag *diagnostics.Engine) (*ast.Program, error) {
