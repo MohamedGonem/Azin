@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/azin-lang/Azin/pkg/diagnostics"
-	"github.com/azin-lang/Azin/pkg/lexer"
 	"github.com/azin-lang/Azin/pkg/source"
 )
 
@@ -40,6 +39,6 @@ func FuzzLexer(f *testing.F) {
 			}
 		}()
 
-		lexer.New(file, diag).Tokenize()
+		New(file, diag).Tokenize()
 	})
 }

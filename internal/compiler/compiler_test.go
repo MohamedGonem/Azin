@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/azin-lang/Azin/internal/compiler"
 	"github.com/azin-lang/Azin/pkg/source"
 )
 
@@ -19,12 +18,12 @@ func TestCompileEmitC(t *testing.T) {
 	file := source.New(azPath, []byte("fn main: int do\n    return 0;\nend\n"))
 
 	outPath := filepath.Join(dir, "output.c")
-	opts := compiler.Options{
+	opts := Options{
 		Output: outPath,
 		EmitC:  true,
 	}
 
-	err := compiler.Compile(file, outPath, opts)
+	err := Compile(file, outPath, opts)
 	if err != nil {
 		t.Fatalf("Compile with EmitC failed: %v", err)
 	}
@@ -49,12 +48,12 @@ func TestCompileEmitCWithImport(t *testing.T) {
 	file := source.New(azPath, input)
 
 	outPath := filepath.Join(dir, "output.c")
-	opts := compiler.Options{
+	opts := Options{
 		Output: outPath,
 		EmitC:  true,
 	}
 
-	err := compiler.Compile(file, outPath, opts)
+	err := Compile(file, outPath, opts)
 	if err != nil {
 		t.Fatalf("Compile with EmitC failed: %v", err)
 	}
@@ -71,11 +70,11 @@ func TestCompileEmitCWithImport(t *testing.T) {
 func TestCompileDefaultOutputPath(t *testing.T) {
 	file := source.New("test.az", []byte("fn main: int do\n    return 0;\nend\n"))
 
-	opts := compiler.Options{
+	opts := Options{
 		EmitC: true,
 	}
 
-	err := compiler.Compile(file, "", opts)
+	err := Compile(file, "", opts)
 	if err != nil {
 		t.Fatalf("Compile with empty output path failed: %v", err)
 	}
@@ -88,12 +87,12 @@ func TestCompileEmptyProgram(t *testing.T) {
 	dir := t.TempDir()
 	outPath := filepath.Join(dir, "empty_out.c")
 	file := source.New("empty.az", []byte{})
-	opts := compiler.Options{
+	opts := Options{
 		EmitC:  true,
 		Output: outPath,
 	}
 
-	err := compiler.Compile(file, outPath, opts)
+	err := Compile(file, outPath, opts)
 	if err != nil {
 		t.Fatalf("expected empty program to succeed, got: %v", err)
 	}

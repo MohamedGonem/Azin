@@ -5,7 +5,6 @@ import (
 
 	"github.com/azin-lang/Azin/pkg/diagnostics"
 	"github.com/azin-lang/Azin/pkg/lexer"
-	"github.com/azin-lang/Azin/pkg/parser"
 	"github.com/azin-lang/Azin/pkg/source"
 )
 
@@ -43,6 +42,6 @@ func FuzzParser(f *testing.F) {
 		}()
 
 		tokens := lexer.New(file, diag).Tokenize()
-		_, _ = parser.Parse(string(file.Slice(0, file.Len())), tokens, diag)
+		_, _ = Parse(string(file.Slice(0, file.Len())), tokens, diag)
 	})
 }

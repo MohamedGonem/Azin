@@ -4,8 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	"github.com/azin-lang/Azin/internal/fs"
 )
 
 func TestReadSourceFileValid(t *testing.T) {
@@ -15,7 +13,7 @@ func TestReadSourceFileValid(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data, err := fs.ReadSourceFile(path, false)
+	data, err := ReadSourceFile(path, false)
 	if err != nil {
 		t.Fatalf("ReadSourceFile(%q) = %v", path, err)
 	}
@@ -31,7 +29,7 @@ func TestReadSourceFileInvalidExtension(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err := fs.ReadSourceFile(path, false)
+	_, err := ReadSourceFile(path, false)
 	if err == nil {
 		t.Error("expected error for .txt file, got nil")
 	}
@@ -44,7 +42,7 @@ func TestReadSourceFileIgnoreExtension(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data, err := fs.ReadSourceFile(path, true)
+	data, err := ReadSourceFile(path, true)
 	if err != nil {
 		t.Fatalf("ReadSourceFile with ignoreExtension: %v", err)
 	}
@@ -54,7 +52,7 @@ func TestReadSourceFileIgnoreExtension(t *testing.T) {
 }
 
 func TestReadSourceFileNotFound(t *testing.T) {
-	_, err := fs.ReadSourceFile("/nonexistent/path.az", false)
+	_, err := ReadSourceFile("/nonexistent/path.az", false)
 	if err == nil {
 		t.Error("expected error for nonexistent file, got nil")
 	}
@@ -67,7 +65,7 @@ func TestReadSourceFileValidExtension(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data, err := fs.ReadSourceFile(path, false)
+	data, err := ReadSourceFile(path, false)
 	if err != nil {
 		t.Errorf("ReadSourceFile(%q): %v", path, err)
 	}
@@ -83,7 +81,7 @@ func TestReadSourceFileEmpty(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	data, err := fs.ReadSourceFile(path, false)
+	data, err := ReadSourceFile(path, false)
 	if err != nil {
 		t.Fatalf("ReadSourceFile(%q): %v", path, err)
 	}

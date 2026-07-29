@@ -1,5 +1,5 @@
 //nolint:unparam
-package semantic_test
+package sema_test
 
 import (
 	"strings"
@@ -9,7 +9,6 @@ import (
 	diagnostics2 "github.com/azin-lang/Azin/pkg/diagnostics"
 	"github.com/azin-lang/Azin/pkg/lexer"
 	"github.com/azin-lang/Azin/pkg/parser"
-	"github.com/azin-lang/Azin/pkg/sema"
 	"github.com/azin-lang/Azin/pkg/source"
 )
 
@@ -23,7 +22,7 @@ func analyzeProgram(t *testing.T, input string) (*ast.Program, *diagnostics2.Eng
 		t.Fatalf("parse error: %v", err)
 	}
 
-	analyzer := sema.New(diag)
+	analyzer := New(diag)
 	if err := analyzer.Analyze(program); err != nil {
 		return program, diag
 	}

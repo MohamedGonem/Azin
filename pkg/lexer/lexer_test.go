@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/azin-lang/Azin/pkg/diagnostics"
-	"github.com/azin-lang/Azin/pkg/lexer"
 	"github.com/azin-lang/Azin/pkg/source"
 	token2 "github.com/azin-lang/Azin/pkg/token"
 )
@@ -16,7 +15,7 @@ import (
 func lex(input string) ([]token2.Token, *diagnostics.Engine) {
 	file := source.New("test.az", []byte(input))
 	diag := diagnostics.New(file)
-	tokens := lexer.New(file, diag).Tokenize()
+	tokens := New(file, diag).Tokenize()
 	return tokens, diag
 }
 

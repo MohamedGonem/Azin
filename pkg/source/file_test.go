@@ -4,12 +4,11 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/azin-lang/Azin/pkg/source"
 	token2 "github.com/azin-lang/Azin/pkg/token"
 )
 
 func TestNewFile(t *testing.T) {
-	f := source.New("test.az", []byte("hello\nworld\n"))
+	f := New("test.az", []byte("hello\nworld\n"))
 	if f.Name() != "test.az" {
 		t.Errorf("Name() = %q, want %q", f.Name(), "test.az")
 	}
@@ -22,7 +21,7 @@ func TestNewFile(t *testing.T) {
 }
 
 func TestEmptyFile(t *testing.T) {
-	f := source.New("empty.az", nil)
+	f := New("empty.az", nil)
 	if !f.Empty() {
 		t.Error("Empty() = false, want true")
 	}
@@ -35,7 +34,7 @@ func TestEmptyFile(t *testing.T) {
 }
 
 func TestLineColumn(t *testing.T) {
-	f := source.New("test.az", []byte("line1\nline2\nline3"))
+	f := New("test.az", []byte("line1\nline2\nline3"))
 	tests := []struct {
 		offset   uint32
 		wantLine uint32
@@ -59,7 +58,7 @@ func TestLineColumn(t *testing.T) {
 }
 
 func TestLine(t *testing.T) {
-	f := source.New("test.az", []byte("abc\ndef\nghi"))
+	f := New("test.az", []byte("abc\ndef\nghi"))
 	if got := string(f.Line(1)); got != "abc" {
 		t.Errorf("Line(1) = %q, want %q", got, "abc")
 	}
@@ -72,7 +71,7 @@ func TestLine(t *testing.T) {
 }
 
 func TestLineOutOfRange(t *testing.T) {
-	f := source.New("test.az", []byte("abc"))
+	f := New("test.az", []byte("abc"))
 	if got := f.Line(0); got != nil {
 		t.Errorf("Line(0) = %v, want nil", got)
 	}
@@ -82,7 +81,7 @@ func TestLineOutOfRange(t *testing.T) {
 }
 
 func TestRune(t *testing.T) {
-	f := source.New("test.az", []byte("a∂c"))
+	f := New("test.az", []byte("a∂c"))
 	r, size := f.Rune(0)
 	if r != 'a' || size != 1 {
 		t.Errorf("Rune(0) = (%c,%d), want (%c,%d)", r, size, 'a', 1)
@@ -94,7 +93,7 @@ func TestRune(t *testing.T) {
 }
 
 func TestSlice(t *testing.T) {
-	f := source.New("test.az", []byte("hello world"))
+	f := New("test.az", []byte("hello world"))
 	if got := string(f.Slice(0, 5)); got != "hello" {
 		t.Errorf("Slice(0,5) = %q, want %q", got, "hello")
 	}
@@ -104,7 +103,7 @@ func TestSlice(t *testing.T) {
 }
 
 func TestText(t *testing.T) {
-	f := source.New("test.az", []byte("var x: int"))
+	f := New("test.az", []byte("var x: int"))
 	tok := token2.Token{Kind: token2.Identifier, Position: token2.Position{Offset: 4}, Length: 1}
 	if got := string(f.Text(tok)); got != "x" {
 		t.Errorf("Text(identifier) = %q, want %q", got, "x")
@@ -112,7 +111,7 @@ func TestText(t *testing.T) {
 }
 
 func TestBaseAndExt(t *testing.T) {
-	f := source.New("/path/to/file.az", nil)
+	f := New("/path/to/file.az", nil)
 	if f.Base() != "file.az" {
 		t.Errorf("Base() = %q, want %q", f.Base(), "file.az")
 	}
@@ -138,7 +137,7 @@ func TestLineCount(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		f := source.New("test.az", []byte(tt.input))
+		f := New("test.az", []byte(tt.input))
 		if got := f.LineCount(); got != tt.want {
 			t.Errorf("LineCount(%q) = %d, want %d", tt.input, got, tt.want)
 		}
@@ -146,7 +145,7 @@ func TestLineCount(t *testing.T) {
 }
 
 func TestEOF(t *testing.T) {
-	f := source.New("test.az", []byte("abc"))
+	f := New("test.az", []byte("abc"))
 	tests := []struct {
 		offset uint32
 		want   bool
@@ -165,7 +164,7 @@ func TestEOF(t *testing.T) {
 }
 
 func TestFormatToken(t *testing.T) {
-	f := source.New("test.az", []byte("fn main()"))
+	f := New("test.az", []byte("fn main()"))
 	tok := token2.Token{
 		Kind:     token2.Identifier,
 		Position: token2.Position{Offset: 3},

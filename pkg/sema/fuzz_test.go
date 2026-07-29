@@ -1,4 +1,4 @@
-package semantic_test
+package sema_test
 
 import (
 	"testing"
@@ -6,7 +6,6 @@ import (
 	"github.com/azin-lang/Azin/pkg/diagnostics"
 	"github.com/azin-lang/Azin/pkg/lexer"
 	"github.com/azin-lang/Azin/pkg/parser"
-	"github.com/azin-lang/Azin/pkg/sema"
 	"github.com/azin-lang/Azin/pkg/source"
 )
 
@@ -41,7 +40,7 @@ func FuzzSemantic(f *testing.F) {
 			return
 		}
 
-		analyzer := sema.New(diag)
+		analyzer := New(diag)
 		_ = analyzer.Analyze(program)
 	})
 }

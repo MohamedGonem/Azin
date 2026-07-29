@@ -4,7 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/azin-lang/Azin/pkg/ast"
 	token2 "github.com/azin-lang/Azin/pkg/token"
 )
 
@@ -12,15 +11,15 @@ func tok(kind token2.Kind, offset, length uint32) token2.Token {
 	return token2.Token{Kind: kind, Position: token2.Position{Offset: offset}, Length: length}
 }
 
-func ident(value string) *ast.Identifier {
-	return &ast.Identifier{
+func ident(value string) *Identifier {
+	return &Identifier{
 		Token: tok(token2.Identifier, 0, uint32(len(value))), //nolint:gosec
 		Value: value,
 	}
 }
 
 func TestProgram(t *testing.T) {
-	p := &ast.Program{Statements: nil}
+	p := &Program{Statements: nil}
 	if p.TokenLiteral() != "" {
 		t.Errorf("empty program TokenLiteral = %q", p.TokenLiteral())
 	}
@@ -33,12 +32,12 @@ func TestProgram(t *testing.T) {
 }
 
 func TestBadNodes(t *testing.T) {
-	be := &ast.BadExpr{Token: tok(token2.Error, 0, 1)}
+	be := &BadExpr{Token: tok(token2.Error, 0, 1)}
 	if be.Label() != "BadExpr" {
 		t.Errorf("BadExpr Label = %q", be.Label())
 	}
 
-	bs := &ast.BadStmt{Token: tok(token2.Error, 1, 2)}
+	bs := &BadStmt{Token: tok(token2.Error, 1, 2)}
 	if bs.Label() != "BadStmt" {
 		t.Errorf("BadStmt Label = %q", bs.Label())
 	}
@@ -48,7 +47,7 @@ func TestBadNodes(t *testing.T) {
 }
 
 func TestVarStmt(t *testing.T) {
-	v := &ast.VarStmt{
+	v := &VarStmt{
 		Token:   tok(token2.KwVar, 0, 3),
 		Name:    ident("x"),
 		SynType: ident("int"),
@@ -69,10 +68,10 @@ func TestVarStmt(t *testing.T) {
 }
 
 func TestFuncStmt(t *testing.T) {
-	f := &ast.FuncStmt{
+	f := &FuncStmt{
 		Token:         tok(token2.KwFn, 0, 2),
 		Name:          ident("add"),
-		Params:        []*ast.FieldDecl{{Name: ident("a"), SynType: ident("int")}},
+		Params:        []*FieldDecl{{Name: ident("a"), SynType: ident("int")}},
 		SynReturnType: ident("int"),
 	}
 	label := f.Label()
@@ -88,7 +87,7 @@ func TestFuncStmt(t *testing.T) {
 }
 
 func TestIfStmt(t *testing.T) {
-	s := &ast.IfStmt{
+	s := &IfStmt{
 		Token:     tok(token2.KwIf, 0, 2),
 		Condition: ident("true"),
 	}
@@ -98,7 +97,7 @@ func TestIfStmt(t *testing.T) {
 }
 
 func TestLoopStmt(t *testing.T) {
-	s := &ast.LoopStmt{
+	s := &LoopStmt{
 		Token: tok(token2.KwLoop, 0, 4),
 	}
 	if s.Label() != "loop" {
@@ -107,7 +106,7 @@ func TestLoopStmt(t *testing.T) {
 }
 
 func TestReturnStmt(t *testing.T) {
-	s := &ast.ReturnStmt{
+	s := &ReturnStmt{
 		Token: tok(token2.KwReturn, 0, 6),
 	}
 	if s.Label() != "return" {
@@ -116,7 +115,7 @@ func TestReturnStmt(t *testing.T) {
 }
 
 func TestStructStmt(t *testing.T) {
-	s := &ast.StructStmt{
+	s := &StructStmt{
 		Token: tok(token2.KwStruct, 0, 6),
 		Name:  ident("Point"),
 	}
@@ -136,55 +135,55 @@ func TestIdentExpr(t *testing.T) {
 }
 
 func TestIntegerLiteral(t *testing.T) {
-	lit := &ast.IntegerLiteral{Token: tok(token2.IntegerLiteral, 0, 2), Value: 42}
+	lit := &IntegerLiteral{Token: tok(token2.IntegerLiteral, 0, 2), Value: 42}
 	if lit.Label() != "42" {
 		t.Errorf("Label = %q", lit.Label())
 	}
 }
 
 func TestFloatLiteral(t *testing.T) {
-	lit := &ast.FloatLiteral{Token: tok(token2.FloatLiteral, 0, 4), Value: 3.14}
+	lit := &FloatLiteral{Token: tok(token2.FloatLiteral, 0, 4), Value: 3.14}
 	if lit.Label() != "3.14" {
 		t.Errorf("Label = %q", lit.Label())
 	}
 }
 
 func TestStringLiteral(t *testing.T) {
-	lit := &ast.StringLiteral{Token: tok(token2.StringLiteral, 0, 5), Value: "hello"}
+	lit := &StringLiteral{Token: tok(token2.StringLiteral, 0, 5), Value: "hello"}
 	if !strings.Contains(lit.Label(), "hello") {
 		t.Errorf("Label missing 'hello': %q", lit.Label())
 	}
 }
 
 func TestCharacterLiteral(t *testing.T) {
-	lit := &ast.CharacterLiteral{Token: tok(token2.CharacterLiteral, 0, 3), Value: 'x'}
+	lit := &CharacterLiteral{Token: tok(token2.CharacterLiteral, 0, 3), Value: 'x'}
 	if !strings.Contains(lit.Label(), "x") {
 		t.Errorf("Label missing 'x': %q", lit.Label())
 	}
 }
 
 func TestBooleanLiteral(t *testing.T) {
-	tLit := &ast.BooleanLiteral{Token: tok(token2.Identifier, 0, 4), Value: true}
+	tLit := &BooleanLiteral{Token: tok(token2.Identifier, 0, 4), Value: true}
 	if tLit.Label() != "true" {
 		t.Errorf("true literal Label = %q", tLit.Label())
 	}
-	fLit := &ast.BooleanLiteral{Token: tok(token2.Identifier, 0, 5), Value: false}
+	fLit := &BooleanLiteral{Token: tok(token2.Identifier, 0, 5), Value: false}
 	if fLit.Label() != "false" {
 		t.Errorf("false literal Label = %q", fLit.Label())
 	}
 }
 
 func TestCallExpr(t *testing.T) {
-	call := &ast.CallExpr{
+	call := &CallExpr{
 		Callee: ident("foo"),
-		Args:   []ast.Expr{},
+		Args:   []Expr{},
 	}
 	if call.Label() != "call foo" {
 		t.Errorf("Label = %q", call.Label())
 	}
 
-	callMember := &ast.CallExpr{
-		Callee: &ast.MemberExpr{
+	callMember := &CallExpr{
+		Callee: &MemberExpr{
 			Object:   ident("obj"),
 			Property: ident("method"),
 		},
@@ -195,7 +194,7 @@ func TestCallExpr(t *testing.T) {
 }
 
 func TestMemberExpr(t *testing.T) {
-	m := &ast.MemberExpr{
+	m := &MemberExpr{
 		Object:   ident("point"),
 		Property: ident("x"),
 	}
@@ -205,10 +204,10 @@ func TestMemberExpr(t *testing.T) {
 }
 
 func TestBinaryExpr(t *testing.T) {
-	b := &ast.BinaryExpr{
-		Left:     &ast.IntegerLiteral{Value: 1},
+	b := &BinaryExpr{
+		Left:     &IntegerLiteral{Value: 1},
 		Operator: tok(token2.Plus, 0, 1),
-		Right:    &ast.IntegerLiteral{Value: 2},
+		Right:    &IntegerLiteral{Value: 2},
 	}
 	// Label returns the Kind.String(), e.g. "plus" not "+"
 	if b.Label() == "" {
@@ -217,7 +216,7 @@ func TestBinaryExpr(t *testing.T) {
 }
 
 func TestFieldDecl(t *testing.T) {
-	f := &ast.FieldDecl{
+	f := &FieldDecl{
 		Name:    ident("name"),
 		SynType: ident("string"),
 	}
@@ -230,10 +229,10 @@ func TestFieldDecl(t *testing.T) {
 }
 
 func TestAssignmentStmt(t *testing.T) {
-	a := &ast.AssignmentStmt{
+	a := &AssignmentStmt{
 		Token: tok(token2.Equal, 0, 1),
 		Left:  ident("x"),
-		Value: &ast.IntegerLiteral{Value: 42},
+		Value: &IntegerLiteral{Value: 42},
 	}
 	if a.Label() != "assign" {
 		t.Errorf("Label = %q, want 'assign'", a.Label())
@@ -241,9 +240,9 @@ func TestAssignmentStmt(t *testing.T) {
 }
 
 func TestImportCStmt(t *testing.T) {
-	i := &ast.ImportCStmt{
+	i := &ImportCStmt{
 		Token: tok(token2.KwImportC, 0, 7),
-		Path:  &ast.StringLiteral{Value: "stdio.h"},
+		Path:  &StringLiteral{Value: "stdio.h"},
 	}
 	if !strings.Contains(i.Label(), "stdio.h") {
 		t.Errorf("Label missing stdio.h: %q", i.Label())
@@ -251,7 +250,7 @@ func TestImportCStmt(t *testing.T) {
 }
 
 func TestExpressionStmt(t *testing.T) {
-	e := &ast.ExpressionStmt{
+	e := &ExpressionStmt{
 		Token:      tok(token2.Identifier, 0, 4),
 		Expression: ident("test"),
 	}
@@ -259,7 +258,7 @@ func TestExpressionStmt(t *testing.T) {
 		t.Errorf("Label = %q, want 'test'", e.Label())
 	}
 
-	nilExpr := &ast.ExpressionStmt{}
+	nilExpr := &ExpressionStmt{}
 	if nilExpr.Label() != "expr" {
 		t.Errorf("nil expr Label = %q, want 'expr'", nilExpr.Label())
 	}
