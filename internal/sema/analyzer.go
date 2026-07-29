@@ -266,8 +266,8 @@ func (a *Analyzer) warningf(node ast.Node, format string, args ...any) {
 	)
 }
 
-func sourceSpan(n ast.Node) (token.Position, uint32) {
-	pos := n.Pos()
+func sourceSpan(n ast.Node) (pos token.Position, length uint32) {
+	pos = n.Pos()
 	switch node := n.(type) {
 	case *ast.Identifier:
 		return pos, node.Token.Length
@@ -329,7 +329,11 @@ func sourceSpan(n ast.Node) (token.Position, uint32) {
 		return pos, end - pos.Offset
 	}
 
-	return pos, uint32(len(n.TokenLiteral()))
+	l := len(n.TokenLiteral())
+	if l > 0 {
+		length = uint32(l)
+	}
+	return
 }
 
 func spanLen(n ast.Node) uint32 {
