@@ -247,21 +247,94 @@ func (a *Analyzer) resolveCallOverload(name string, argTypes []*types.TypeInfo) 
 }
 
 func (a *Analyzer) errorf(node ast.Node, format string, args ...any) {
+	pos, length := sourceSpan(node)
 	a.diag.ReportError(
-		node.Pos(),
-		len(node.TokenLiteral()),
+		pos,
+		int(length),
 		format,
 		args...,
 	)
 }
 
 func (a *Analyzer) warningf(node ast.Node, format string, args ...any) {
+	pos, length := sourceSpan(node)
 	a.diag.ReportWarning(
-		node.Pos(),
-		len(node.TokenLiteral()),
+		pos,
+		int(length),
 		format,
 		args...,
 	)
+}
+
+func sourceSpan(n ast.Node) (token.Position, uint32) {
+	pos := n.Pos()
+	switch node := n.(type) {
+	case *ast.Identifier:
+		return pos, node.Token.Length
+
+	case *ast.IntegerLiteral:
+		return pos, node.Token.Length
+	case *ast.FloatLiteral:
+		return pos, node.Token.Length
+	case *ast.StringLiteral:
+		return pos, node.Token.Length
+	case *ast.CharacterLiteral:
+		return pos, node.Token.Length
+	case *ast.BooleanLiteral:
+		return pos, node.Token.Length
+	case *ast.BinaryExpr:
+		leftEnd := node.Left.Pos().Offset + spanLen(node.Left)
+		rightEnd := node.Right.Pos().Offset + spanLen(node.Right)
+		if rightEnd > leftEnd {
+			return pos, rightEnd - pos.Offset
+		}
+		return pos, leftEnd - pos.Offset
+	case *ast.MemberExpr:
+		objEnd := node.Object.Pos().Offset + spanLen(node.Object)
+		propEnd := node.Property.Token.Position.Offset + node.Property.Token.Length
+		if objEnd > propEnd {
+			return pos, objEnd - pos.Offset
+		}
+		return pos, propEnd - pos.Offset
+	case *ast.CallExpr:
+		end := node.Callee.Pos().Offset + spanLen(node.Callee)
+		for _, arg := range node.Args {
+			argEnd := arg.Pos().Offset + spanLen(arg)
+			if argEnd > end {
+				end = argEnd
+			}
+		}
+		return pos, end - pos.Offset
+	case *ast.VarStmt:
+		end := node.Name.Token.Position.Offset + node.Name.Token.Length
+		if node.SynType != nil {
+			tEnd := node.SynType.Token.Position.Offset + node.SynType.Token.Length
+			if tEnd > end {
+				end = tEnd
+			}
+		}
+		if node.Value != nil {
+			vEnd := node.Value.Pos().Offset + spanLen(node.Value)
+			if vEnd > end {
+				end = vEnd
+			}
+		}
+		return pos, end - pos.Offset
+	case *ast.AssignmentStmt:
+		end := node.Left.Pos().Offset + spanLen(node.Left)
+		vEnd := node.Value.Pos().Offset + spanLen(node.Value)
+		if vEnd > end {
+			end = vEnd
+		}
+		return pos, end - pos.Offset
+	}
+
+	return pos, uint32(len(n.TokenLiteral()))
+}
+
+func spanLen(n ast.Node) uint32 {
+	_, length := sourceSpan(n)
+	return length
 }
 
 // Analyze performs sema analysis on the given AST program.
