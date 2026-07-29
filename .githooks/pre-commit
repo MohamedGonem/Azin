@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+files=$(git diff --cached --name-only --diff-filter=ACMR | grep '\.go$' || true)
+
+[ -z "$files" ] && exit 0
+
+echo "$files" | xargs gofmt -w
+echo "$files" | xargs goimports -w
+echo "$files" | xargs git add
