@@ -3,58 +3,100 @@ name: CI
 on:
   push:
     branches: [ main, dev ]
-    paths-ignore:
-      - "**.md"
+    paths:
+      - "**/*.go"
+      - "**/*.az"
+      - go.mod
+      - go.sum
+      - .github/workflows/**
   pull_request:
     branches: [ main, dev ]
-    paths-ignore:
-      - "**.md"
+    paths:
+      - "**/*.go"
+      - "**/*.az"
+      - go.mod
+      - go.sum
+      - .github/workflows/**
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
 
+env:
+  GOFLAGS: -trimpath
+
 jobs:
   lint:
-    name: Lint
+    name: Lint (Go ${{ matrix.go }})
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
+
+    strategy:
+      fail-fast: false
+      matrix:
+        go: [ stable, oldstable ]
 
     steps:
       - uses: actions/checkout@v7
 
       - uses: actions/setup-go@v7
         with:
-          go-version-file: go.mod
-          cache: false
+          go-version: ${{ matrix.go }}
+          cache: true
 
-      - name: Verify dependencies
+      - name: Verify modules
         run: go mod verify
+
+      - name: Verify go.mod/go.sum
+        run: |
+          go mod tidy
+          git diff --exit-code
+
+      - name: Check formatting
+        run: |
+          files=$(gofmt -l .)
+          if [ -n "$files" ]; then
+            echo "These files need formatting:"
+            echo "$files"
+            exit 1
+          fi
+
+      - name: Run go vet
+        run: go vet ./...
+
+      - name: Run staticcheck
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@latest
+          staticcheck ./...
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
-          version: latest
+          version: v2.5.0
+          install-mode: binary
 
-  build:
-    name: Build and test (${{ matrix.os }})
+  test:
+    name: Test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-latest
-            bin: azc
+            binary: azc
+            race: true
           - os: macos-latest
-            bin: azc
+            binary: azc
+            race: false
           - os: windows-latest
-            bin: azc.exe
+            binary: azc.exe
+            race: false
 
     defaults:
       run:
@@ -65,37 +107,78 @@ jobs:
 
       - uses: actions/setup-go@v7
         with:
-          go-version-file: go.mod
+          go-version: stable
           cache: true
-          cache-dependency-path: go.sum
 
-      - name: Install modern GCC (Linux)
+      - name: Install GCC 14
         if: runner.os == 'Linux'
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq software-properties-common
-          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
-          sudo apt-get install -y -qq gcc-14
+          sudo apt-get update
+          sudo apt-get install -y gcc-14
           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100
 
-      - name: Setup MSVC (Windows)
+      - name: Setup MSVC
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Download dependencies
-        run: go mod download
+      - name: Build all packages
+        run: go build -v ./...
 
-      - name: Build binary
-        run: go build -v -o "${{ matrix.bin }}" ./cmd/azc
+      - name: Build compiler
+        run: go build -v -o "${{ matrix.binary }}" ./cmd/azc
+
+      - name: Verify installation
+        run: |
+          go install ./cmd/azc
+          "$(go env GOPATH)/bin/azc" --help >/dev/null
 
       - name: Run tests
+        if: ${{ !matrix.race }}
         env:
-          AZC: ${{ github.workspace }}/${{ matrix.bin }}
-        run: go test -v -count=1 -cover ./...
+          AZC: ${{ github.workspace }}/${{ matrix.binary }}
+        run: |
+          go test -v -count=1 -coverprofile=coverage.out -shuffle=on ./...
 
-      - name: Upload binary artifact
+      - name: Run tests (race)
+        if: matrix.race
+        env:
+          AZC: ${{ github.workspace }}/${{ matrix.binary }}
+        run: |
+          go test -v -count=1 -race -coverprofile=coverage.out -shuffle=on ./...
+
+      - name: Upload coverage
         uses: actions/upload-artifact@v7
         with:
-          name: azc-${{ matrix.os }}
-          path: ${{ matrix.bin }}
+          name: coverage-${{ runner.os }}
+          path: coverage.out
           retention-days: 7
+
+      - name: Upload compiler
+        uses: actions/upload-artifact@v7
+        with:
+          name: azc-${{ runner.os }}
+          path: ${{ matrix.binary }}
+          if-no-files-found: error
+          retention-days: 7
+
+  cross-compile:
+    name: Cross-compile
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v7
+        with:
+          go-version: stable
+          cache: true
+
+      - name: Verify cross compilation
+        run: |
+          GOOS=linux GOARCH=amd64 go build ./cmd/azc
+          GOOS=linux GOARCH=arm64 go build ./cmd/azc
+          GOOS=windows GOARCH=amd64 go build ./cmd/azc
+          GOOS=windows GOARCH=arm64 go build ./cmd/azc
+          GOOS=darwin GOARCH=amd64 go build ./cmd/azc
+          GOOS=darwin GOARCH=arm64 go build ./cmd/azc
