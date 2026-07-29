@@ -1,4 +1,4 @@
-#define AzAppVersion "0.2.1"
+#define AzAppVersion "0.2.2"
 
 [Setup]
 AppId={{CA1B358E-4F89-412E-B278-72C2F9B983BD}
