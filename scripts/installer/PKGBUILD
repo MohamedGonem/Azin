@@ -1,6 +1,6 @@
 # Maintainer: Bryson K <bryson@azin-lang (dot) org>
 pkgname=azin
-pkgver=0.2.1
+pkgver=0.2.2
 pkgrel=1
 pkgdesc="Systems programming language"
 arch=('x86_64')

@@ -1,59 +1,52 @@
-enum Color is
-    Red
-    Green
-    Blue
+importc "stdio.h"
+
+
+enum Types is
+    Teacher
+    Doctor
+    None
 end
 
-enum UnusedEnum is
-    A
-    B
+struct Human is
+    mut age: int
+    mut name: string
+    mut type: Types
 end
 
-
-struct Point is
-    mut x: int
-    mut y: int
-end
-
-struct UnusedStruct is
-    mut value: int
-end
-
-struct Wrapper is
-    mut point: Point
-    mut enabled: bool
-end
-
-
-fn main do
-    var color: Color = Color.Red
-    var a = color
-    var b = a
-    var c = b
-    var d = c
-    var e = d
-    var f = e
-
-    if f != Color.Blue then
-        return 1
-
-        printf("dead code\n")
+fn verify(person: Human): bool do
+    if person.age >= 17 then
+        return true
     else
-        helper("hello\n")
-        return 2
+        return false
     end
 end
 
-
-fn helper(message: string) do
-    var unused: int = 123
-
-    printf(message)
-
-    return 0
+fn cureme(person: Human) do
+    if person.type == Types.Doctor then
+        printf("\n\nIf you are really a doctor, cure me, I have...\n*Doctor ignores*")
+    end
 end
 
+fn main: int do
 
-fn neverCalled do
-    printf("should disappear\n")
+    /*
+        Ignores comments? 
+    */
+    
+    // Yes it does
+
+    var mut person1: Human
+    person1.age = 18
+    person1.name = "Joseph"
+    person1.type = Types.Doctor
+
+    if verify(person1) then
+        printf("You may enter")
+        cureme(person1)
+    else
+        printf("You may not enter")
+    end
+
+    return 0
+
 end
