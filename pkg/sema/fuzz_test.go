@@ -6,6 +6,7 @@ import (
 	"github.com/azin-lang/Azin/pkg/diagnostics"
 	"github.com/azin-lang/Azin/pkg/lexer"
 	"github.com/azin-lang/Azin/pkg/parser"
+	"github.com/azin-lang/Azin/pkg/sema"
 	"github.com/azin-lang/Azin/pkg/source"
 )
 
@@ -40,7 +41,7 @@ func FuzzSemantic(f *testing.F) {
 			return
 		}
 
-		analyzer := New(diag)
+		analyzer := sema.New(diag)
 		_ = analyzer.Analyze(program)
 	})
 }

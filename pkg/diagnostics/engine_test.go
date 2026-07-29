@@ -6,13 +6,14 @@ import (
 	"sync"
 	"testing"
 
+	diagnostics "github.com/azin-lang/Azin/pkg/diagnostics"
 	"github.com/azin-lang/Azin/pkg/source"
 	"github.com/azin-lang/Azin/pkg/token"
 )
 
-func newTestEngine(text string) (*Engine, *source.File) {
+func newTestEngine(text string) (*diagnostics.Engine, *source.File) {
 	file := source.New("test.az", []byte(text))
-	return New(file), file
+	return diagnostics.New(file), file
 }
 
 func TestReportError(t *testing.T) {
@@ -66,14 +67,14 @@ func TestDiagnosticsCollection(t *testing.T) {
 		t.Fatalf("got %d diagnostics, want 3", len(all))
 	}
 
-	if all[0].Kind != Error {
-		t.Errorf("first diagnostic kind = %d, want %d", all[0].Kind, Error)
+	if all[0].Kind != diagnostics.Error {
+		t.Errorf("first diagnostic kind = %d, want %d", all[0].Kind, diagnostics.Error)
 	}
-	if all[1].Kind != Warning {
-		t.Errorf("second diagnostic kind = %d, want %d", all[1].Kind, Warning)
+	if all[1].Kind != diagnostics.Warning {
+		t.Errorf("second diagnostic kind = %d, want %d", all[1].Kind, diagnostics.Warning)
 	}
-	if all[2].Kind != Error {
-		t.Errorf("third diagnostic kind = %d, want %d", all[2].Kind, Error)
+	if all[2].Kind != diagnostics.Error {
+		t.Errorf("third diagnostic kind = %d, want %d", all[2].Kind, diagnostics.Error)
 	}
 }
 
@@ -167,7 +168,7 @@ func TestErrorLimitSuppressesExcess(t *testing.T) {
 
 	limitNote := false
 	for _, d := range all {
-		if d.Kind == Note && strings.Contains(d.Message, "too many errors") {
+		if d.Kind == diagnostics.Note && strings.Contains(d.Message, "too many errors") {
 			limitNote = true
 			break
 		}
@@ -205,7 +206,7 @@ func TestErrorLimitWarningsNotAffected(t *testing.T) {
 	all := diag.Diagnostics()
 	warnings := 0
 	for _, d := range all {
-		if d.Kind == Warning {
+		if d.Kind == diagnostics.Warning {
 			warnings++
 		}
 	}

@@ -2,58 +2,60 @@ package token_test
 
 import (
 	"testing"
+
+	tok "github.com/azin-lang/Azin/pkg/token"
 )
 
 func TestKindDisplayName(t *testing.T) {
 	tests := []struct {
-		kind Kind
+		kind tok.Kind
 		want string
 	}{
-		{Unknown, "unknown"},
-		{Identifier, "identifier"},
-		{IntegerLiteral, "integer literal"},
-		{FloatLiteral, "float literal"},
-		{StringLiteral, "string literal"},
-		{CharacterLiteral, "character literal"},
-		{KwFn, "'fn'"},
-		{KwDo, "'do'"},
-		{KwVar, "'var'"},
-		{KwMut, "'mut'"},
-		{KwReturn, "'return'"},
-		{KwEnd, "'end'"},
-		{KwIf, "'if'"},
-		{KwThen, "'then'"},
-		{KwElse, "'else'"},
-		{KwStruct, "'struct'"},
-		{KwIs, "'is'"},
-		{KwImportC, "'importC'"},
-		{KwChar, "'char'"},
-		{KwInt, "'int'"},
-		{KwBool, "'bool'"},
-		{KwNull, "'null'"},
-		{KwUnit, "'unit'"},
-		{KwString, "'string'"},
-		{KwFloat, "'float'"},
-		{Plus, "'+'"},
-		{Minus, "'-'"},
-		{Star, "'*'"},
-		{Slash, "'/'"},
-		{Equal, "'='"},
-		{EqualEqual, "'=='"},
-		{Bang, "'!'"},
-		{BangEqual, "'!='"},
-		{Less, "'<'"},
-		{LessEqual, "'<='"},
-		{Greater, "'>'"},
-		{GreaterEqual, "'>='"},
-		{LeftParen, "'('"},
-		{RightParen, "')'"},
-		{Comma, "','"},
-		{Colon, "':'"},
-		{Semicolon, "';'"},
-		{Dot, "'.'"},
-		{Newline, "newline"},
-		{EOF, "end of file"},
+		{tok.Unknown, "unknown"},
+		{tok.Identifier, "identifier"},
+		{tok.IntegerLiteral, "integer literal"},
+		{tok.FloatLiteral, "float literal"},
+		{tok.StringLiteral, "string literal"},
+		{tok.CharacterLiteral, "character literal"},
+		{tok.KwFn, "'fn'"},
+		{tok.KwDo, "'do'"},
+		{tok.KwVar, "'var'"},
+		{tok.KwMut, "'mut'"},
+		{tok.KwReturn, "'return'"},
+		{tok.KwEnd, "'end'"},
+		{tok.KwIf, "'if'"},
+		{tok.KwThen, "'then'"},
+		{tok.KwElse, "'else'"},
+		{tok.KwStruct, "'struct'"},
+		{tok.KwIs, "'is'"},
+		{tok.KwImportC, "'importC'"},
+		{tok.KwChar, "'char'"},
+		{tok.KwInt, "'int'"},
+		{tok.KwBool, "'bool'"},
+		{tok.KwNull, "'null'"},
+		{tok.KwUnit, "'unit'"},
+		{tok.KwString, "'string'"},
+		{tok.KwFloat, "'float'"},
+		{tok.Plus, "'+'"},
+		{tok.Minus, "'-'"},
+		{tok.Star, "'*'"},
+		{tok.Slash, "'/'"},
+		{tok.Equal, "'='"},
+		{tok.EqualEqual, "'=='"},
+		{tok.Bang, "'!'"},
+		{tok.BangEqual, "'!='"},
+		{tok.Less, "'<'"},
+		{tok.LessEqual, "'<='"},
+		{tok.Greater, "'>'"},
+		{tok.GreaterEqual, "'>='"},
+		{tok.LeftParen, "'('"},
+		{tok.RightParen, "')'"},
+		{tok.Comma, "','"},
+		{tok.Colon, "':'"},
+		{tok.Semicolon, "';'"},
+		{tok.Dot, "'.'"},
+		{tok.Newline, "newline"},
+		{tok.EOF, "end of file"},
 	}
 
 	for _, tt := range tests {
@@ -65,7 +67,7 @@ func TestKindDisplayName(t *testing.T) {
 }
 
 func TestKindDisplayNameNonEmpty(t *testing.T) {
-	for k := Unknown; k <= Error; k++ {
+	for k := tok.Unknown; k <= tok.Error; k++ {
 		name := k.DisplayName()
 		if name == "" {
 			t.Errorf("DisplayName(%d) is empty", k)
@@ -75,17 +77,17 @@ func TestKindDisplayNameNonEmpty(t *testing.T) {
 
 func TestKindHasText(t *testing.T) {
 	tests := []struct {
-		kind Kind
+		kind tok.Kind
 		want bool
 	}{
-		{Identifier, true},
-		{IntegerLiteral, true},
-		{FloatLiteral, true},
-		{StringLiteral, true},
-		{CharacterLiteral, true},
-		{Plus, false},
-		{KwFn, false},
-		{EOF, false},
+		{tok.Identifier, true},
+		{tok.IntegerLiteral, true},
+		{tok.FloatLiteral, true},
+		{tok.StringLiteral, true},
+		{tok.CharacterLiteral, true},
+		{tok.Plus, false},
+		{tok.KwFn, false},
+		{tok.EOF, false},
 	}
 
 	for _, tt := range tests {

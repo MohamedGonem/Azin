@@ -9,6 +9,7 @@ import (
 	diagnostics2 "github.com/azin-lang/Azin/pkg/diagnostics"
 	"github.com/azin-lang/Azin/pkg/lexer"
 	"github.com/azin-lang/Azin/pkg/parser"
+	sema "github.com/azin-lang/Azin/pkg/sema"
 	"github.com/azin-lang/Azin/pkg/source"
 )
 
@@ -22,7 +23,7 @@ func analyzeProgram(t *testing.T, input string) (*ast.Program, *diagnostics2.Eng
 		t.Fatalf("parse error: %v", err)
 	}
 
-	analyzer := New(diag)
+	analyzer := sema.New(diag)
 	if err := analyzer.Analyze(program); err != nil {
 		return program, diag
 	}

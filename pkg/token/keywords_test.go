@@ -2,37 +2,39 @@ package token_test
 
 import (
 	"testing"
+
+	tok "github.com/azin-lang/Azin/pkg/token"
 )
 
 func TestKeywordsContainAllRegistered(t *testing.T) {
-	expected := map[string]Kind{
-		"fn":      KwFn,
-		"do":      KwDo,
-		"var":     KwVar,
-		"mut":     KwMut,
-		"return":  KwReturn,
-		"end":     KwEnd,
-		"char":    KwChar,
-		"int":     KwInt,
-		"bool":    KwBool,
-		"unit":    KwUnit,
-		"string":  KwString,
-		"float":   KwFloat,
-		"if":      KwIf,
-		"then":    KwThen,
-		"else":    KwElse,
-		"struct":  KwStruct,
-		"is":      KwIs,
-		"importc": KwImportC,
-		"loop":    KwLoop,
-		"stop":    KwStop,
-		"null":    KwNull,
-		"enum":    KwEnum,
-		"defer":   KwDefer,
+	expected := map[string]tok.Kind{
+		"fn":      tok.KwFn,
+		"do":      tok.KwDo,
+		"var":     tok.KwVar,
+		"mut":     tok.KwMut,
+		"return":  tok.KwReturn,
+		"end":     tok.KwEnd,
+		"char":    tok.KwChar,
+		"int":     tok.KwInt,
+		"bool":    tok.KwBool,
+		"unit":    tok.KwUnit,
+		"string":  tok.KwString,
+		"float":   tok.KwFloat,
+		"if":      tok.KwIf,
+		"then":    tok.KwThen,
+		"else":    tok.KwElse,
+		"struct":  tok.KwStruct,
+		"is":      tok.KwIs,
+		"importc": tok.KwImportC,
+		"loop":    tok.KwLoop,
+		"stop":    tok.KwStop,
+		"null":    tok.KwNull,
+		"enum":    tok.KwEnum,
+		"defer":   tok.KwDefer,
 	}
 
 	for word, kind := range expected {
-		got, ok := Keywords[word]
+		got, ok := tok.Keywords[word]
 		if !ok {
 			t.Errorf("Keywords map missing entry for %q", word)
 			continue
@@ -53,13 +55,13 @@ func TestKeywordsNoExtraEntries(t *testing.T) {
 		"null": true, "enum": true, "defer": true,
 	}
 
-	for word := range Keywords {
+	for word := range tok.Keywords {
 		if !known[word] {
 			t.Errorf("Unexpected keyword entry: %q", word)
 		}
 	}
 
-	if len(Keywords) != len(known) {
-		t.Errorf("Keywords map has %d entries, want %d", len(Keywords), len(known))
+	if len(tok.Keywords) != len(known) {
+		t.Errorf("Keywords map has %d entries, want %d", len(tok.Keywords), len(known))
 	}
 }

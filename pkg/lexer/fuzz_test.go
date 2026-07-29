@@ -3,8 +3,9 @@ package lexer_test
 import (
 	"testing"
 
-	"github.com/azin-lang/Azin/pkg/diagnostics"
-	"github.com/azin-lang/Azin/pkg/source"
+	diagnostics "github.com/azin-lang/Azin/pkg/diagnostics"
+	"github.com/azin-lang/Azin/pkg/lexer"
+	source "github.com/azin-lang/Azin/pkg/source"
 )
 
 func FuzzLexer(f *testing.F) {
@@ -39,6 +40,6 @@ func FuzzLexer(f *testing.F) {
 			}
 		}()
 
-		New(file, diag).Tokenize()
+		lexer.New(file, diag).Tokenize()
 	})
 }

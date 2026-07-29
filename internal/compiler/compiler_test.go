@@ -3,105 +3,116 @@ package compiler_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/azin-lang/Azin/internal/compiler"
 	"github.com/azin-lang/Azin/pkg/source"
 )
 
-func TestCompileEmitC(t *testing.T) {
-	dir := t.TempDir()
-	azPath := filepath.Join(dir, "test.az")
-	if err := os.WriteFile(azPath, []byte("fn main: int do\n    return 0;\nend\n"), 0o600); err != nil {
-		t.Fatal(err)
+func writeSource(t *testing.T, dir, name, src string) *source.File {
+	t.Helper()
+	path := filepath.Join(dir, name)
+	if err := os.WriteFile(path, []byte(src), 0o600); err != nil {
+		t.Fatalf("failed to write source file: %v", err)
 	}
-
-	file := source.New(azPath, []byte("fn main: int do\n    return 0;\nend\n"))
-
-	outPath := filepath.Join(dir, "output.c")
-	opts := Options{
-		Output: outPath,
-		EmitC:  true,
-	}
-
-	err := Compile(file, outPath, opts)
-	if err != nil {
-		t.Fatalf("Compile with EmitC failed: %v", err)
-	}
-
-	data, err := os.ReadFile(outPath)
-	if err != nil {
-		t.Fatalf("failed to read output file: %v", err)
-	}
-	if len(data) == 0 {
-		t.Error("output file is empty")
-	}
+	return source.New(path, []byte(src))
 }
 
-func TestCompileEmitCWithImport(t *testing.T) {
-	dir := t.TempDir()
-	azPath := filepath.Join(dir, "test.az")
-	input := []byte("importc \"stdio.h\"\nfn main: int do\n    return 0;\nend\n")
-	if err := os.WriteFile(azPath, input, 0o600); err != nil {
-		t.Fatal(err)
-	}
-
-	file := source.New(azPath, input)
-
-	outPath := filepath.Join(dir, "output.c")
-	opts := Options{
-		Output: outPath,
-		EmitC:  true,
-	}
-
-	err := Compile(file, outPath, opts)
-	if err != nil {
-		t.Fatalf("Compile with EmitC failed: %v", err)
-	}
-
-	data, err := os.ReadFile(outPath)
+func readOutput(t *testing.T, path string) string {
+	t.Helper()
+	data, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("failed to read output file: %v", err)
 	}
-	if len(data) == 0 {
-		t.Error("output file is empty")
+	return string(data)
+}
+
+func TestCompileEmitC(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		source   string
+		contains []string
+	}{
+		{
+			name: "minimal program",
+			source: `
+fn main: int do
+    return 0
+end
+`,
+			contains: []string{"int main"},
+		},
+		{
+			name: "importc",
+			source: `
+importc "stdio"
+fn main: int do
+    printf("hello\n")
+    return 0
+end
+`,
+			contains: []string{"#include <stdio.h>", "int main"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			dir := t.TempDir()
+			file := writeSource(t, dir, "test.az", tt.source)
+			out := filepath.Join(dir, "output.c")
+			opts := compiler.Options{Output: out, EmitC: true}
+			if err := compiler.Compile(file, out, opts); err != nil {
+				t.Fatalf("Compile() failed: %v", err)
+			}
+			got := readOutput(t, out)
+			if got == "" {
+				t.Fatal("generated C source is empty")
+			}
+			for _, want := range tt.contains {
+				if !strings.Contains(got, want) {
+					t.Fatalf("generated output does not contain %q\n\n%s", want, got)
+				}
+			}
+		})
 	}
 }
 
 func TestCompileDefaultOutputPath(t *testing.T) {
-	file := source.New("test.az", []byte("fn main: int do\n    return 0;\nend\n"))
+	dir := t.TempDir()
+	t.Chdir(dir)
 
-	opts := Options{
-		EmitC: true,
+	file := writeSource(t, dir, "test.az", `
+fn main: int do 
+    return 0
+end 
+`)
+
+	opts := compiler.Options{EmitC: true}
+	if err := compiler.Compile(file, "", opts); err != nil {
+		t.Fatalf("Compile() failed: %v", err)
 	}
 
-	err := Compile(file, "", opts)
-	if err != nil {
-		t.Fatalf("Compile with empty output path failed: %v", err)
+	output := filepath.Join(dir, "output.c")
+	if _, err := os.Stat(output); err != nil {
+		t.Fatalf("expected output file to exist: %v", err)
 	}
-
-	// Clean up the default output file
-	_ = os.Remove("output.c")
 }
 
 func TestCompileEmptyProgram(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
-	outPath := filepath.Join(dir, "empty_out.c")
-	file := source.New("empty.az", []byte{})
-	opts := Options{
-		EmitC:  true,
-		Output: outPath,
+	file := writeSource(t, dir, "empty.az", "")
+	out := filepath.Join(dir, "empty.c")
+	opts := compiler.Options{Output: out, EmitC: true}
+	if err := compiler.Compile(file, out, opts); err != nil {
+		t.Fatalf("Compile() failed: %v", err)
 	}
-
-	err := Compile(file, outPath, opts)
-	if err != nil {
-		t.Fatalf("expected empty program to succeed, got: %v", err)
-	}
-
-	data, err := os.ReadFile(outPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(data) != 0 {
-		t.Error("output should be empty")
+	got := readOutput(t, out)
+	if got != "" {
+		t.Fatalf("expected empty output, got:\n%s", got)
 	}
 }

@@ -11,6 +11,7 @@ import (
 	ast2 "github.com/azin-lang/Azin/pkg/ast"
 	"github.com/azin-lang/Azin/pkg/diagnostics"
 	"github.com/azin-lang/Azin/pkg/lexer"
+	"github.com/azin-lang/Azin/pkg/parser"
 	"github.com/azin-lang/Azin/pkg/source"
 	"github.com/azin-lang/Azin/pkg/token"
 )
@@ -22,7 +23,7 @@ func parseProgram(t *testing.T, input string) (*ast2.Program, *diagnostics.Engin
 	file := source.New("test.az", []byte(input))
 	diag := diagnostics.New(file)
 	tokens := lexer.New(file, diag).Tokenize()
-	program, err := Parse(string(file.Slice(0, file.Len())), tokens, diag)
+	program, err := parser.Parse(string(file.Slice(0, file.Len())), tokens, diag)
 	if err != nil {
 		return program, diag
 	}
