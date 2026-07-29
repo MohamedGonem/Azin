@@ -2,7 +2,7 @@
 package analysis
 
 import (
-	"github.com/azin-lang/Azin/internal/ast"
+	"github.com/azin-lang/Azin/pkg/ast"
 )
 
 func (a *Analyzer) visitExpr(fn string, expr ast.Expr) {

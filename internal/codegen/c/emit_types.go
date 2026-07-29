@@ -1,7 +1,7 @@
 package c
 
 import (
-	"github.com/azin-lang/Azin/internal/ast"
+	"github.com/azin-lang/Azin/pkg/ast"
 )
 
 func (t *Transpiler) emitTypes(

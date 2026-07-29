@@ -217,6 +217,8 @@ azin_old/
 /build/
 
 *.sum
+output
+main
 !go.sum
 CONVERSATION.md
 test.txt

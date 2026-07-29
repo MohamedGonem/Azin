@@ -3,7 +3,7 @@ package analysis
 import (
 	"fmt"
 
-	"github.com/azin-lang/Azin/internal/ast"
+	"github.com/azin-lang/Azin/pkg/ast"
 )
 
 func (a *Analyzer) ReportError(format string, args ...any) {

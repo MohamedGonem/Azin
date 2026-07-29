@@ -65,18 +65,10 @@ jobs:
             exit 1
           fi
 
-      - name: Run go vet
-        run: go vet ./...
-
-      - name: Run staticcheck
-        run: |
-          go install honnef.co/go/tools/cmd/staticcheck@latest
-          staticcheck ./...
-
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.12.2
+          version: latest
           install-mode: binary
 
   test:
@@ -121,7 +113,7 @@ jobs:
         if: runner.os == 'Windows'
         uses: ilammy/msvc-dev-cmd@v1
 
-      - name: Build all packages
+      - name: Build all packages (pkg, internal, cmd)
         run: go build -v ./...
 
       - name: Build compiler
@@ -129,17 +121,17 @@ jobs:
 
       - name: Verify installation
         run: |
-          go install ./cmd/azc
-          "$(go env GOPATH)/bin/azc" --help >/dev/null
+          go install ./cmd/...
+          azc --help >/dev/null
 
-      - name: Run tests
+      - name: Run unit & E2E tests
         if: ${{ !matrix.race }}
         env:
           AZC: ${{ github.workspace }}/${{ matrix.binary }}
         run: |
           go test -v -count=1 -coverprofile=coverage.out -shuffle=on ./...
 
-      - name: Run tests (race)
+      - name: Run unit & E2E tests (race)
         if: matrix.race
         env:
           AZC: ${{ github.workspace }}/${{ matrix.binary }}
@@ -153,7 +145,7 @@ jobs:
           path: coverage.out
           retention-days: 7
 
-      - name: Upload compiler
+      - name: Upload compiler binary
         uses: actions/upload-artifact@v7
         with:
           name: azc-${{ runner.os }}
@@ -174,11 +166,11 @@ jobs:
           go-version: stable
           cache: true
 
-      - name: Verify cross compilation
+      - name: Verify cross compilation for all binaries
         run: |
-          GOOS=linux GOARCH=amd64 go build ./cmd/azc
-          GOOS=linux GOARCH=arm64 go build ./cmd/azc
-          GOOS=windows GOARCH=amd64 go build ./cmd/azc
-          GOOS=windows GOARCH=arm64 go build ./cmd/azc
-          GOOS=darwin GOARCH=amd64 go build ./cmd/azc
-          GOOS=darwin GOARCH=arm64 go build ./cmd/azc
+          GOOS=linux GOARCH=amd64 go build ./cmd/...
+          GOOS=linux GOARCH=arm64 go build ./cmd/...
+          GOOS=windows GOARCH=amd64 go build ./cmd/...
+          GOOS=windows GOARCH=arm64 go build ./cmd/...
+          GOOS=darwin GOARCH=amd64 go build ./cmd/...
+          GOOS=darwin GOARCH=arm64 go build ./cmd/...
