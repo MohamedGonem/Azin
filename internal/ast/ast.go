@@ -299,8 +299,6 @@ type FieldDecl struct {
 	SemaType *types.TypeInfo
 }
 
-func (*FieldDecl) declNode() {}
-
 func (f *FieldDecl) TokenLiteral() string { return f.Name.TokenLiteral() }
 func (f *FieldDecl) Pos() token.Position  { return f.Name.Pos() }
 func (f *FieldDecl) Label() string {

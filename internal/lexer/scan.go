@@ -38,21 +38,6 @@ func (l *Lexer) peekNext() rune {
 	return nextRune
 }
 
-func (l *Lexer) peekString(s string) bool {
-	offset := l.cursor
-	for _, r := range s {
-		if l.file.EOF(offset) {
-			return false
-		}
-		ch, size := l.file.Rune(offset)
-		if ch != r {
-			return false
-		}
-		offset += size
-	}
-	return true
-}
-
 func (l *Lexer) advance() (r rune, size uint32) {
 	if l.eof() {
 		return 0, 0
@@ -70,19 +55,6 @@ func (l *Lexer) match(ch rune) bool {
 	return true
 }
 
-func (l *Lexer) matchString(s string) bool {
-	start := l.pos()
-
-	for _, r := range s {
-		if l.peek() != r {
-			l.rewind(start)
-			return false
-		}
-		_, _ = l.advance()
-	}
-	return true
-}
-
 func (l *Lexer) matchAny(chars string) bool {
 	r := l.peek()
 	for _, ch := range chars {
@@ -92,10 +64,6 @@ func (l *Lexer) matchAny(chars string) bool {
 		}
 	}
 	return false
-}
-
-func (l *Lexer) rewind(pos token.Position) {
-	l.cursor = pos.Offset
 }
 
 func (l *Lexer) consumeWhile(pred func(rune) bool) {
