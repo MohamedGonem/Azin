@@ -331,7 +331,7 @@ func sourceSpan(n ast.Node) (pos token.Position, length uint32) {
 
 	l := len(n.TokenLiteral())
 	if l > 0 {
-		length = uint32(l)
+		length = uint32(l) //nolint:gosec
 	}
 	return
 }
