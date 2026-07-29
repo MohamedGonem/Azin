@@ -3,16 +3,34 @@ name: Deploy API Docs
 on:
   push:
     branches: [ main, dev ]
+    paths:
+      - "**/*.go"
+      - go.mod
+      - go.sum
+      - .github/workflows/**
   pull_request:
     branches: [ main, dev ]
+    paths:
+      - "**/*.go"
+      - go.mod
+      - go.sum
+      - .github/workflows/**
   workflow_dispatch:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: docs-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
+
+env:
+  GOFLAGS: -trimpath
+  GOBIN: ${{ github.workspace }}/bin
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   generate:
@@ -20,50 +38,43 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
-    permissions:
-      contents: read
-
     steps:
       - uses: actions/checkout@v7
 
-      - name: Set up Go
-        uses: actions/setup-go@v7
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
           cache: true
 
-      - name: Download dependencies
-        run: go mod download
-
-      - name: Set up Go binary cache
-        uses: actions/cache@v6
-        with:
-          path: ~/go/bin
-          key: ${{ runner.os }}-go-bin-${{ hashFiles('go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-bin-
+      - name: Verify modules
+        run: go mod verify
 
       - name: Install doc2go
-        run: go install go.abhg.dev/doc2go@latest
+        run: |
+          mkdir -p "$GOBIN"
+          go install go.abhg.dev/doc2go@v0.12.2
 
       - name: Generate documentation
         run: |
-          $(go env GOPATH)/bin/doc2go \
+          "$GOBIN/doc2go" \
             -internal \
             -out build/docs/html \
             ./...
 
-      - name: Upload docs
+      - name: Upload documentation
         uses: actions/upload-artifact@v7
         with:
-          name: doc2go-html
+          name: api-docs-html
           path: build/docs/html
+          if-no-files-found: error
           retention-days: 7
 
   deploy:
     name: Deploy documentation
     needs: generate
-    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    if: |
+      github.event_name == 'workflow_dispatch' || github.event_name == 'push'
+
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -71,11 +82,14 @@ jobs:
       contents: read
       deployments: write
 
+    environment:
+      name: production
+
     steps:
-      - name: Download docs
+      - name: Download documentation
         uses: actions/download-artifact@v7
         with:
-          name: doc2go-html
+          name: api-docs-html
           path: build/docs/html
 
       - name: Deploy to Cloudflare Pages

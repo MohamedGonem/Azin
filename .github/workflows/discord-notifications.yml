@@ -4,33 +4,20 @@ on:
   pull_request:
     types: [ opened, synchronize, reopened ]
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
-
-permissions:
-  contents: read
-
 jobs:
   notify:
-    name: Send webhook
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-
     steps:
-      - name: Discord Webhook Action
-        uses: tsickert/discord-webhook@v7.0.0
+      - name: Send Discord notification
+        uses: stegzilla/discord-notify@v5
         with:
-          webhook-url: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          embed-title: "Pull Request ${{ github.event.action }}: #${{ github.event.pull_request.number }}"
-          embed-description: |
+          webhook_url: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          title: "Pull Request ${{ github.event.action }}: #${{ github.event.pull_request.number }}"
+          message: |
             **${{ github.event.pull_request.title }}**
 
             Branch: `${{ github.event.pull_request.head.ref }}` into `${{ github.event.pull_request.base.ref }}`
-          embed-url: ${{ github.event.pull_request.html_url }}
-          # Dynamically set color: green for opened/reopened, blue for updates (synchronize)
-          embed-color: ${{ github.event.action == 'synchronize' && '3447003' || '5814783' }}
-          embed-author-name: ${{ github.event.pull_request.user.login }}
-          embed-author-url: ${{ github.event.pull_request.user.html_url }}
-          embed-author-icon-url: ${{ github.event.pull_request.user.avatar_url }}
-          embed-footer-text: ${{ github.repository }}
+          include_image: true
+          avatar_url: ${{ github.event.pull_request.user.avatar_url }}
+          username: G${{ github.event.pull_request.user.login }}
+          colour: ${{ github.event.action == 'synchronize' && '#3447003' || '#5814783' }}
