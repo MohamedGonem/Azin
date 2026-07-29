@@ -47,50 +47,37 @@ func msvcOptimization(opt string) string {
 	}
 }
 
-func runMSVC(cl, sourcePath, exeName string, opts Options) error {
+func runMSVC(cl string, sources []string, exeName string, opts Options) error {
 	opt := msvcOptimization(opts.Optimization)
+	args := append([]string{"/nologo", "/std:c11", opt, "/Fe:" + exeName}, sources...)
 
 	return runCompilerCommand(
 		cl,
-		[]string{
-			"/nologo",
-			"/std:c11",
-			opt,
-			"/Fe:" + exeName,
-			sourcePath,
-		},
+		args,
 		"MSVC",
 		exeName,
 	)
 }
 
-func runClang(clang, sourcePath, exeName string, opts Options) error {
+func runClang(clang string, sources []string, exeName string, opts Options) error {
+	args := append([]string{"-std=c11", "-O" + opts.Optimization}, sources...)
+	args = append(args, "-o", exeName, "-lm")
+
 	return runCompilerCommand(
 		clang,
-		[]string{
-			"-std=c11",
-			"-O" + opts.Optimization,
-			sourcePath,
-			"-o",
-			exeName,
-			"-lm",
-		},
+		args,
 		"Clang",
 		exeName,
 	)
 }
 
-func runGCC(gcc, sourcePath, exeName string, opts Options) error {
+func runGCC(gcc string, sources []string, exeName string, opts Options) error {
+	args := append([]string{"-std=c11", "-O" + opts.Optimization}, sources...)
+	args = append(args, "-o", exeName, "-lm")
+
 	return runCompilerCommand(
 		gcc,
-		[]string{
-			"-std=c11",
-			"-O" + opts.Optimization,
-			sourcePath,
-			"-o",
-			exeName,
-			"-lm",
-		},
+		args,
 		"GCC",
 		exeName,
 	)
@@ -98,10 +85,10 @@ func runGCC(gcc, sourcePath, exeName string, opts Options) error {
 
 type compiler struct {
 	name string
-	run  func(string, string, string, Options) error
+	run  func(string, []string, string, Options) error
 }
 
-func runCompiler(sourcePath, exeName string, opts Options) error {
+func runCompiler(sources []string, exeName string, opts Options) error {
 	var compilers []compiler
 
 	switch runtime.GOOS {
@@ -127,7 +114,7 @@ func runCompiler(sourcePath, exeName string, opts Options) error {
 
 	for _, c := range compilers {
 		if path, err := exec.LookPath(c.name); err == nil {
-			return c.run(path, sourcePath, exeName, opts)
+			return c.run(path, sources, exeName, opts)
 		}
 	}
 
@@ -150,8 +137,20 @@ func writeCOutput(code, output string) error {
 	return nil
 }
 
-// Compile compiles the given source file to a C executable.
-func Compile(file *source.File, outputPath string, opts Options) error {
+// Compile compiles the given source files to a C executable.
+func Compile(files []*source.File, outputPath string, opts Options) error {
+	if len(files) == 0 {
+		return fmt.Errorf("no source files to compile")
+	}
+
+	if len(files) == 1 {
+		return compileSingle(files[0], outputPath, opts)
+	}
+
+	return compileMulti(files, outputPath, opts)
+}
+
+func compileSingle(file *source.File, outputPath string, opts Options) error {
 	diag := diagnostics.New(file)
 
 	program, err := parseSource(file, diag)
@@ -187,7 +186,67 @@ func Compile(file *source.File, outputPath string, opts Options) error {
 		}
 	}(tmpPath)
 
-	return runCompiler(tmpPath, exeName, opts)
+	return runCompiler([]string{tmpPath}, exeName, opts)
+}
+
+func compileMulti(files []*source.File, outputPath string, opts Options) error {
+	merged := mergeSources(files)
+	diag := diagnostics.New(merged)
+
+	program, err := parseSource(merged, diag)
+	if err != nil {
+		return err
+	}
+
+	analyzer := sema.New(diag)
+	if err := analyzer.Analyze(program); err != nil {
+		return err
+	}
+
+	optimizer.Optimize(program)
+	cCode, err := transpileToC(program)
+	if err != nil {
+		return err
+	}
+
+	if opts.EmitC {
+		return writeCOutput(cCode, outputPath)
+	}
+
+	exeName := resolveExeName(outputPath)
+	tmpPath, err := writeToTempFile(cCode)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		os.Remove(tmpPath)
+	}()
+
+	return runCompiler([]string{tmpPath}, exeName, opts)
+}
+
+func mergeSources(files []*source.File) *source.File {
+	if len(files) == 1 {
+		return files[0]
+	}
+
+	var names []string
+	var totalLen int
+	for _, f := range files {
+		names = append(names, f.Name())
+		totalLen += int(f.Len())
+	}
+
+	text := make([]byte, 0, totalLen+len(files))
+	for i, f := range files {
+		if i > 0 {
+			text = append(text, '\n')
+		}
+		text = append(text, f.Slice(0, f.Len())...)
+	}
+
+	displayName := strings.Join(names, " + ")
+	return source.New(displayName, text)
 }
 
 func parseSource(file *source.File, diag *diagnostics.Engine) (*ast.Program, error) {
