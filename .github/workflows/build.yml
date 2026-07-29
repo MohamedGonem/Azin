@@ -1,64 +1,101 @@
 name: CI
 
 on:
-    push:
-        branches: [ main, dev ]
-    pull_request:
-        branches: [ main, dev ]
+  push:
+    branches: [ main, dev ]
+    paths-ignore:
+      - "**.md"
+  pull_request:
+    branches: [ main, dev ]
+    paths-ignore:
+      - "**.md"
+  workflow_dispatch:
 
 concurrency:
-    group: ${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
-    contents: read
+  contents: read
 
 jobs:
-    build:
-        name: Go (${{ matrix.os }})
-        runs-on: ${{ matrix.os }}
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
 
-        strategy:
-            fail-fast: false
-            matrix:
-                os: [ubuntu-latest, macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v7
 
-        defaults:
-            run:
-                shell: bash
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: false
 
-        steps:
-            - uses: actions/checkout@v4
+      - name: Verify dependencies
+        run: go mod verify
 
-            - name: Setup Go
-              uses: actions/setup-go@v5
-              with:
-                go-version: 'stable'
-                cache: true
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: latest
 
-            - name: Verify formatting
-              if: runner.os != 'Windows'
-              run: |
-                test -z "$(gofmt -l .)"
+  build:
+    name: Build and test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
 
-            - name: Run go vet
-              run: go vet ./...
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            bin: azc
+          - os: macos-latest
+            bin: azc
+          - os: windows-latest
+            bin: azc.exe
 
-            - name: Run tests
-              run: go test ./...
+    defaults:
+      run:
+        shell: bash
 
-            - name: Build
-              run: go build -o azc ./cmd/azc
+    steps:
+      - uses: actions/checkout@v7
 
-            - name: Verify version (Unix)
-              if: runner.os != 'Windows'
-              run: |
-                bash ./scripts/test/test.sh
+      - uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
 
-            - name: Verify version (Windows)
-              if: runner.os == 'Windows'
-              shell: pwsh
-              run: |
-                .\scripts\test\test.ps1
+      - name: Install modern GCC (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq software-properties-common
+          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          sudo apt-get install -y -qq gcc-14
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-14 100
 
+      - name: Setup MSVC (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
 
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build binary
+        run: go build -v -o "${{ matrix.bin }}" ./cmd/azc
+
+      - name: Run tests
+        env:
+          AZC: ${{ github.workspace }}/${{ matrix.bin }}
+        run: go test -v -count=1 -cover ./...
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: azc-${{ matrix.os }}
+          path: ${{ matrix.bin }}
+          retention-days: 7

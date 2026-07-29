@@ -1,3 +1,4 @@
+//nolint:goconst
 package compiler
 
 import (
@@ -9,11 +10,12 @@ import (
 	"strings"
 
 	"github.com/azin-lang/Azin/internal/ast"
-	"github.com/azin-lang/Azin/internal/codegen"
+	"github.com/azin-lang/Azin/internal/codegen/c"
 	"github.com/azin-lang/Azin/internal/diagnostics"
 	"github.com/azin-lang/Azin/internal/lexer"
+	"github.com/azin-lang/Azin/internal/optimizer"
 	"github.com/azin-lang/Azin/internal/parser"
-	"github.com/azin-lang/Azin/internal/semantic"
+	"github.com/azin-lang/Azin/internal/sema"
 	"github.com/azin-lang/Azin/internal/source"
 )
 
@@ -52,6 +54,7 @@ func runMSVC(cl, sourcePath, exeName string, opts Options) error {
 		cl,
 		[]string{
 			"/nologo",
+			"/std:c11",
 			opt,
 			"/Fe:" + exeName,
 			sourcePath,
@@ -65,11 +68,12 @@ func runClang(clang, sourcePath, exeName string, opts Options) error {
 	return runCompilerCommand(
 		clang,
 		[]string{
-			"-std=c23",
+			"-std=c11",
 			"-O" + opts.Optimization,
 			sourcePath,
 			"-o",
 			exeName,
+			"-lm",
 		},
 		"Clang",
 		exeName,
@@ -80,11 +84,12 @@ func runGCC(gcc, sourcePath, exeName string, opts Options) error {
 	return runCompilerCommand(
 		gcc,
 		[]string{
-			"-std=c23",
+			"-std=c11",
 			"-O" + opts.Optimization,
 			sourcePath,
 			"-o",
 			exeName,
+			"-lm",
 		},
 		"GCC",
 		exeName,
@@ -103,8 +108,8 @@ func runCompiler(sourcePath, exeName string, opts Options) error {
 	case "windows":
 		compilers = []compiler{
 			{"cl.exe", runMSVC},
-			{"gcc", runGCC},
 			{"clang", runClang},
+			{"gcc", runGCC},
 		}
 
 	case "darwin":
@@ -137,7 +142,7 @@ func writeCOutput(code, output string) error {
 		output += ".c"
 	}
 
-	if err := os.WriteFile(output, []byte(code), 0644); err != nil {
+	if err := os.WriteFile(output, []byte(code), 0o600); err != nil {
 		return fmt.Errorf("failed to write C source: %w", err)
 	}
 
@@ -147,19 +152,24 @@ func writeCOutput(code, output string) error {
 
 // Compile compiles the given source file to a C executable.
 func Compile(file *source.File, outputPath string, opts Options) error {
-	program, err := parseSource(file)
+	diag := diagnostics.New(file)
+
+	program, err := parseSource(file, diag)
 	if err != nil {
 		return err
 	}
 
-	diag := diagnostics.New(file)
-	analyzer := semantic.New(diag)
+	analyzer := sema.New(diag)
 
 	if err := analyzer.Analyze(program); err != nil {
 		return err
 	}
 
-	cCode := transpileToC(program)
+	optimizer.Optimize(program)
+	cCode, err := transpileToC(program)
+	if err != nil {
+		return err
+	}
 
 	if opts.EmitC {
 		return writeCOutput(cCode, outputPath)
@@ -172,18 +182,15 @@ func Compile(file *source.File, outputPath string, opts Options) error {
 		return err
 	}
 	defer func(name string) {
-		err := os.Remove(name)
-		if err != nil {
-			panic(err)
+		if err := os.Remove(name); err != nil {
+			fmt.Printf("warning: failed to remove temp file %s: %v\n", name, err)
 		}
 	}(tmpPath)
 
 	return runCompiler(tmpPath, exeName, opts)
 }
 
-func parseSource(file *source.File) (*ast.Program, error) {
-	diag := diagnostics.New(file)
-
+func parseSource(file *source.File, diag *diagnostics.Engine) (*ast.Program, error) {
 	tokens := lexer.New(file, diag).Tokenize()
 	if err := diag.Err(); err != nil {
 		return nil, err
@@ -200,8 +207,8 @@ func parseSource(file *source.File) (*ast.Program, error) {
 	return program, diag.Err()
 }
 
-func transpileToC(program *ast.Program) string {
-	tx := codegen.New()
+func transpileToC(program *ast.Program) (string, error) {
+	tx := c.New()
 	return tx.Transpile(program)
 }
 

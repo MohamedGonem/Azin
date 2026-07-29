@@ -8,15 +8,17 @@ import (
 )
 
 type ErrorReporter interface {
-	ReportError(pos token.Position, length uint32, format string, args ...any)
+	ReportError(pos token.Position, length int, format string, args ...any)
 	Err() error
 }
 
 const (
 	_ int = iota
 	PrecLowest
+	PrecBitwiseAnd // &
 	PrecEquality   // ==, !=
 	PrecComparison // <, >, <=, >=
+	PrecShift      // <<, >>
 	PrecTerm       // +, -
 	PrecFactor     // *, /
 	PrecCall       // (
@@ -69,7 +71,7 @@ func (p *Parser) lexeme(tok token.Token) string {
 	start := int(tok.Position.Offset)
 	end := start + int(tok.Length)
 	if start < 0 {
-		panic("negative token offset") // shouldn't reach here (but it can)
+		return ""
 	}
 	if end > len(p.source) {
 		end = len(p.source)
@@ -81,7 +83,7 @@ func (p *Parser) lexeme(tok token.Token) string {
 }
 
 func (p *Parser) reportError(tok token.Token, format string, args ...any) {
-	p.diag.ReportError(tok.Position, tok.Length, format, args...)
+	p.diag.ReportError(tok.Position, int(tok.Length), format, args...)
 }
 
 func badStmt(tok token.Token) *ast.BadStmt {
@@ -188,6 +190,7 @@ func (p *Parser) match(kinds ...token.Kind) bool {
 	return false
 }
 
+//nolint:unparam
 func (p *Parser) consumeStatementEnd() bool {
 	switch p.peek().Kind {
 	case token.Semicolon:
@@ -215,8 +218,8 @@ func isBuiltinType(kind token.Kind) bool {
 
 func isSyncPoint(kind token.Kind) bool {
 	switch kind {
-	case token.KwFn, token.KwStruct, token.KwVar, token.KwIf, token.KwLoop,
-		token.KwReturn, token.KwElse, token.KwImportC, token.KwEnd:
+	case token.KwFn, token.KwStruct, token.KwEnum, token.KwVar, token.KwIf, token.KwLoop,
+		token.KwReturn, token.KwElse, token.KwImportC, token.KwDefer, token.KwEnd:
 		return true
 	default:
 		return false
@@ -233,10 +236,14 @@ func getPrecedence(kind token.Kind) int {
 		return PrecFactor
 	case token.Plus, token.Minus:
 		return PrecTerm
+	case token.LessLess, token.GreaterGreater:
+		return PrecShift
 	case token.Less, token.LessEqual, token.Greater, token.GreaterEqual:
 		return PrecComparison
 	case token.EqualEqual, token.BangEqual:
 		return PrecEquality
+	case token.Ampersand:
+		return PrecBitwiseAnd
 	default:
 		return PrecLowest
 	}

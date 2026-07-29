@@ -59,7 +59,7 @@ func (p *Parser) parseVar() ast.Stmt {
 	return &ast.VarStmt{
 		Token:   tok,
 		Name:    name,
-		Type:    typ,
+		SynType: typ,
 		Value:   value,
 		Mutable: mutable,
 	}
@@ -95,6 +95,8 @@ func (p *Parser) parseStatement() ast.Stmt {
 		stmt = p.parseVar()
 	case p.check(token.KwStruct):
 		stmt = p.parseStruct()
+	case p.check(token.KwEnum):
+		stmt = p.parseEnum()
 	case p.check(token.KwFn):
 		stmt = p.parseFunc()
 	case p.check(token.KwReturn):
@@ -107,6 +109,8 @@ func (p *Parser) parseStatement() ast.Stmt {
 		stmt = p.parseLoop()
 	case p.check(token.KwStop):
 		stmt = p.parseStop()
+	case p.check(token.KwDefer):
+		stmt = p.parseDefer()
 	case p.check(token.KwEnd):
 		p.reportError(p.peek(), "unexpected 'end'")
 		p.advance()
@@ -200,6 +204,41 @@ func (p *Parser) parseStruct() ast.Stmt {
 	}
 }
 
+func (p *Parser) parseEnum() ast.Stmt {
+	tok := p.advance()
+	name := p.parseIdentifier()
+	if name == nil {
+		return badStmt(tok)
+	}
+	p.expect(token.KwIs, "after enum name")
+
+	var variants []*ast.Identifier
+	for !p.isAtEnd() {
+		p.skipNewlines()
+		if p.check(token.KwEnd) {
+			break
+		}
+
+		variant := p.parseIdentifier()
+		if variant != nil {
+			variants = append(variants, variant)
+		} else {
+			// if variant parsing failed, sync to try parsing the next variant
+			p.synchronize()
+		}
+
+		p.consumeStatementEnd()
+	}
+
+	p.expect(token.KwEnd, "to close enum")
+
+	return &ast.EnumStmt{
+		Token:    tok,
+		Name:     name,
+		Variants: variants,
+	}
+}
+
 func (p *Parser) parseType() *ast.Identifier {
 	if isBuiltinType(p.peek().Kind) {
 		tok := p.advance()
@@ -250,7 +289,7 @@ func (p *Parser) parseFunc() ast.Stmt {
 	p.expect(token.KwEnd, "to close function")
 
 	// Return partial function node even if errors occurred (allows autocomplete to work inside)
-	return &ast.FuncStmt{Token: tok, Name: name, Params: params, ReturnType: retType, Body: body}
+	return &ast.FuncStmt{Token: tok, Name: name, Params: params, SynReturnType: retType, Body: body}
 }
 
 func (p *Parser) parseReturn() ast.Stmt {
@@ -407,7 +446,7 @@ func (p *Parser) parseFieldDecl(allowMut bool) *ast.FieldDecl {
 
 	return &ast.FieldDecl{
 		Name:    name,
-		Type:    tName,
+		SynType: tName,
 		Mutable: mutable,
 	}
 }
@@ -431,5 +470,16 @@ func (p *Parser) parseLoop() ast.Stmt {
 	return &ast.LoopStmt{
 		Token: tok,
 		Body:  body,
+	}
+}
+
+func (p *Parser) parseDefer() ast.Stmt {
+	tok := p.advance()
+	call := p.parseExpression(PrecLowest)
+	p.consumeStatementEnd()
+
+	return &ast.DeferStmt{
+		Token: tok,
+		Call:  call,
 	}
 }

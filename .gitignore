@@ -17,6 +17,9 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+output
+output.c
+*.o
 
 # Dependency directories (remove the comment below to include it)
 # vendor/
@@ -217,3 +220,4 @@ azin_old/
 !go.sum
 CONVERSATION.md
 test.txt
+tests/azin/output

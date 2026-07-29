@@ -10,46 +10,72 @@ import (
 	"github.com/azin-lang/Azin/internal/token"
 )
 
+const defaultErrorLimit = 50
+
 // Engine collects diagnostics for a source file.
 type Engine struct {
 	mu          sync.RWMutex
 	file        *source.File
 	diagnostics []Diagnostic
 	hasErrors   bool
+	errorCount  int
+	errorLimit  int
+	limitNote   bool
 }
 
 // New returns a new Engine for the given file.
 func New(file *source.File) *Engine {
 	return &Engine{
-		file: file,
+		file:       file,
+		errorLimit: defaultErrorLimit,
 	}
 }
 
+// SetErrorLimit sets the maximum number of errors before reporting stops.
+// A value of 0 means unlimited.
+func (e *Engine) SetErrorLimit(n int) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.errorLimit = n
+}
+
 // Report adds a diagnostic to the engine.
-func (e *Engine) Report(kind DiagnosticKind, pos token.Position, length uint32, format string, args ...any) {
+func (e *Engine) Report(kind DiagnosticKind, pos token.Position, length int, format string, args ...any) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 
 	if kind == Error {
 		e.hasErrors = true
+		e.errorCount++
+
+		if e.errorLimit > 0 && e.errorCount > e.errorLimit {
+			if !e.limitNote {
+				e.limitNote = true
+				e.diagnostics = append(e.diagnostics, Diagnostic{
+					Kind: Note, Message: fmt.Sprintf("too many errors (limit %d)", e.errorLimit),
+				})
+			}
+			return
+		}
 	}
+
 	e.diagnostics = append(e.diagnostics, Diagnostic{
-		Kind: kind, Message: fmt.Sprintf(format, args...), Position: pos, Length: length,
+		Kind: kind, Message: fmt.Sprintf(format, args...), Position: pos, Length: uint32(length), //nolint:gosec
 	})
 }
 
 // ReportError logs an error-level diagnostic.
-func (e *Engine) ReportError(pos token.Position, length uint32, format string, args ...any) {
+func (e *Engine) ReportError(pos token.Position, length int, format string, args ...any) {
 	e.Report(Error, pos, length, format, args...)
 }
 
 // ReportWarning logs a warning-level diagnostic.
-func (e *Engine) ReportWarning(pos token.Position, length uint32, format string, args ...any) {
+func (e *Engine) ReportWarning(pos token.Position, length int, format string, args ...any) {
 	e.Report(Warning, pos, length, format, args...)
 }
 
 // ReportNote logs a note-level diagnostic.
-func (e *Engine) ReportNote(pos token.Position, length uint32, format string, args ...any) {
+func (e *Engine) ReportNote(pos token.Position, length int, format string, args ...any) {
 	e.Report(Note, pos, length, format, args...)
 }
 
@@ -113,13 +139,7 @@ func (e *Engine) Error() string {
 		_, _ = fmt.Fprintf(&b, "%*d | %s\n", gutter, line, src)
 		_, _ = fmt.Fprintf(&b, "%*s | ", gutter, "")
 
-		colIdx := int(column) - 1
-		if colIdx < 0 {
-			colIdx = 0
-		}
-		if colIdx > len(src) {
-			colIdx = len(src)
-		}
+		colIdx := min(max(int(column)-1, 0), len(src))
 
 		prefix := src[:colIdx]
 		for _, ch := range prefix {

@@ -1,0 +1,61 @@
+version: "2"
+
+run:
+  timeout: 5m
+  relative-path-mode: gomod
+
+linters:
+  default: none
+
+  enable:
+    # Correctness
+    - errcheck
+    - errchkjson
+    - errorlint
+    - govet
+    - ineffassign
+    - nilerr
+    - nilnesserr
+    - nilnil
+    - staticcheck
+    - unconvert
+    - unparam
+    - unused
+
+    # Quality
+    - copyloopvar
+    - gocheckcompilerdirectives
+    - goconst
+    - gocritic
+    - intrange
+    - makezero
+    - mirror
+    - misspell
+    - prealloc
+    - predeclared
+    - recvcheck
+    - wastedassign
+
+    # Security
+    - gosec
+
+  settings:
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+        - style
+      disabled-checks:
+        - whyNoLint
+    exhaustive:
+      default-signifies-exhaustive: true
+
+  exclusions:
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
