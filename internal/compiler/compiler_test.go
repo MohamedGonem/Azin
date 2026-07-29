@@ -65,7 +65,7 @@ end
 			file := writeSource(t, dir, "test.az", tt.source)
 			out := filepath.Join(dir, "output.c")
 			opts := compiler.Options{Output: out, EmitC: true}
-			if err := compiler.Compile(file, out, opts); err != nil {
+			if err := compiler.Compile([]*source.File{file}, out, opts); err != nil {
 				t.Fatalf("Compile() failed: %v", err)
 			}
 			got := readOutput(t, out)
@@ -92,7 +92,7 @@ end
 `)
 
 	opts := compiler.Options{EmitC: true}
-	if err := compiler.Compile(file, "", opts); err != nil {
+	if err := compiler.Compile([]*source.File{file}, "", opts); err != nil {
 		t.Fatalf("Compile() failed: %v", err)
 	}
 
@@ -108,7 +108,7 @@ func TestCompileEmptyProgram(t *testing.T) {
 	file := writeSource(t, dir, "empty.az", "")
 	out := filepath.Join(dir, "empty.c")
 	opts := compiler.Options{Output: out, EmitC: true}
-	if err := compiler.Compile(file, out, opts); err != nil {
+	if err := compiler.Compile([]*source.File{file}, out, opts); err != nil {
 		t.Fatalf("Compile() failed: %v", err)
 	}
 	got := readOutput(t, out)

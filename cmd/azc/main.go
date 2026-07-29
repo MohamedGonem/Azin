@@ -30,7 +30,7 @@ var (
 
 func init() {
 	flag.Usage = func() {
-		_, _ = fmt.Fprintf(flag.CommandLine.Output(), "Usage: %s [flags] <file>\n\n", os.Args[0])
+		_, _ = fmt.Fprintf(flag.CommandLine.Output(), "Usage: %s [flags] <file...>\n\n", os.Args[0])
 		flag.PrintDefaults()
 	}
 }
@@ -43,7 +43,7 @@ func main() {
 		return
 	}
 
-	if flag.NArg() != 1 {
+	if flag.NArg() < 1 {
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -52,38 +52,46 @@ func main() {
 		printDebug()
 	}
 
-	filename := flag.Arg(0)
-	data := mustReadSource(filename)
-	file := source.New(filename, data)
-
-	diag := diagnostics.New(file)
-	l := lexer.New(file, diag)
-	tokens := l.Tokenize()
-
-	if err := diag.Err(); err != nil {
-		fatal(err)
+	var files []*source.File
+	for _, filename := range flag.Args() {
+		data := mustReadSource(filename)
+		files = append(files, source.New(filename, data))
 	}
 
-	if *printTokens {
-		for _, tok := range tokens {
-			fmt.Println(formatToken(file, tok))
+	if *printTokens || *printAST {
+		if len(files) != 1 {
+			fatal(fmt.Errorf("--print-tokens and --print-ast only support a single input file"))
 		}
-		return
-	}
+		file := files[0]
+		diag := diagnostics.New(file)
+		l := lexer.New(file, diag)
+		tokens := l.Tokenize()
 
-	program, parseErr := parser.Parse(string(file.Slice(0, file.Len())), tokens, diag)
+		if err := diag.Err(); err != nil {
+			fatal(err)
+		}
 
-	if parseErr != nil {
-		fatal(parseErr)
-	}
-
-	if *printAST {
-		if *output != "" {
-			if err := ast.ExportDebugTree(program, *output); err != nil {
-				fatal(err)
+		if *printTokens {
+			for _, tok := range tokens {
+				fmt.Println(formatToken(file, tok))
 			}
-		} else {
-			ast.PrintDebugTree(program)
+			return
+		}
+
+		program, parseErr := parser.Parse(string(file.Slice(0, file.Len())), tokens, diag)
+
+		if parseErr != nil {
+			fatal(parseErr)
+		}
+
+		if *printAST {
+			if *output != "" {
+				if err := ast.ExportDebugTree(program, *output); err != nil {
+					fatal(err)
+				}
+			} else {
+				ast.PrintDebugTree(program)
+			}
 		}
 		return
 	}
@@ -95,17 +103,17 @@ func main() {
 		Debug:        *debug,
 	}
 
-	err := compiler.Compile(file, *output, opts)
+	err := compiler.Compile(files, *output, opts)
 	if err != nil {
 		fatal(err)
 	}
 
-	if err := diag.Err(); err != nil {
-		fatal(err)
-	}
-
-	if *debug {
-		fmt.Printf("Compiled %.2f KiB\n", float64(file.Len())/1024)
+	if *debug && len(files) > 0 {
+		var total uint32
+		for _, f := range files {
+			total += f.Len()
+		}
+		fmt.Printf("Compiled %.2f KiB\n", float64(total)/1024)
 	}
 }
 
