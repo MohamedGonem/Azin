@@ -1,6 +1,8 @@
 package analysis
 
-import "github.com/azin-lang/Azin/internal/ast"
+import (
+	"github.com/azin-lang/Azin/pkg/ast"
+)
 
 func (a *Analyzer) Walk(program *ast.Program) {
 	for _, stmt := range program.Statements {

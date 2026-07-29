@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/azin-lang/Azin/internal/ast"
-	"github.com/azin-lang/Azin/internal/token"
-	"github.com/azin-lang/Azin/internal/types"
+	"github.com/azin-lang/Azin/pkg/ast"
+	"github.com/azin-lang/Azin/pkg/token"
+	"github.com/azin-lang/Azin/pkg/types"
 )
 
 func (t *Transpiler) emitExpression(

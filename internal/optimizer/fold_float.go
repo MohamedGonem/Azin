@@ -1,34 +1,34 @@
 package optimizer
 
 import (
-	"github.com/azin-lang/Azin/internal/ast"
-	"github.com/azin-lang/Azin/internal/token"
+	"github.com/azin-lang/Azin/pkg/ast"
+	token2 "github.com/azin-lang/Azin/pkg/token"
 )
 
-func foldFloat(left *ast.FloatLiteral, op token.Token, right *ast.FloatLiteral) ast.Expr {
+func foldFloat(left *ast.FloatLiteral, op token2.Token, right *ast.FloatLiteral) ast.Expr {
 	switch op.Kind {
-	case token.Plus:
+	case token2.Plus:
 		return floatLit(left.Value + right.Value)
-	case token.Minus:
+	case token2.Minus:
 		return floatLit(left.Value - right.Value)
-	case token.Star:
+	case token2.Star:
 		return floatLit(left.Value * right.Value)
-	case token.Slash:
+	case token2.Slash:
 		if right.Value == 0 {
 			return nil
 		}
 		return floatLit(left.Value / right.Value)
-	case token.EqualEqual:
+	case token2.EqualEqual:
 		return boolLit(left.Value == right.Value)
-	case token.BangEqual:
+	case token2.BangEqual:
 		return boolLit(left.Value != right.Value)
-	case token.Less:
+	case token2.Less:
 		return boolLit(left.Value < right.Value)
-	case token.LessEqual:
+	case token2.LessEqual:
 		return boolLit(left.Value <= right.Value)
-	case token.Greater:
+	case token2.Greater:
 		return boolLit(left.Value > right.Value)
-	case token.GreaterEqual:
+	case token2.GreaterEqual:
 		return boolLit(left.Value >= right.Value)
 	default:
 		return nil

@@ -1,6 +1,8 @@
 package analysis
 
-import "github.com/azin-lang/Azin/internal/ast"
+import (
+	"github.com/azin-lang/Azin/pkg/ast"
+)
 
 func (a *Analyzer) visitIf(fn string, stmt *ast.IfStmt) {
 	a.visitExpr(fn, stmt.Condition)

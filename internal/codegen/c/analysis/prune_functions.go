@@ -1,6 +1,8 @@
 package analysis
 
-import "github.com/azin-lang/Azin/internal/ast"
+import (
+	"github.com/azin-lang/Azin/pkg/ast"
+)
 
 func (a *Analyzer) RemoveUnusedFunctions(program *ast.Program) {
 	out := program.Statements[:0]

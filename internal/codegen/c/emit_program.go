@@ -3,7 +3,7 @@ package c
 import (
 	"sort"
 
-	"github.com/azin-lang/Azin/internal/ast"
+	"github.com/azin-lang/Azin/pkg/ast"
 )
 
 func (t *Transpiler) emit(

@@ -1,7 +1,7 @@
 package analysis
 
 import (
-	"github.com/azin-lang/Azin/internal/ast"
+	"github.com/azin-lang/Azin/pkg/ast"
 )
 
 func (a *Analyzer) visitCall(current string, call *ast.CallExpr) {

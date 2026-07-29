@@ -9,14 +9,14 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/azin-lang/Azin/internal/ast"
 	"github.com/azin-lang/Azin/internal/codegen/c"
-	"github.com/azin-lang/Azin/internal/diagnostics"
-	"github.com/azin-lang/Azin/internal/lexer"
 	"github.com/azin-lang/Azin/internal/optimizer"
-	"github.com/azin-lang/Azin/internal/parser"
-	"github.com/azin-lang/Azin/internal/sema"
-	"github.com/azin-lang/Azin/internal/source"
+	"github.com/azin-lang/Azin/pkg/ast"
+	"github.com/azin-lang/Azin/pkg/diagnostics"
+	"github.com/azin-lang/Azin/pkg/lexer"
+	"github.com/azin-lang/Azin/pkg/parser"
+	"github.com/azin-lang/Azin/pkg/sema"
+	"github.com/azin-lang/Azin/pkg/source"
 )
 
 func runCompilerCommand(name string, args []string, label, output string) error {

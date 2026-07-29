@@ -3,7 +3,7 @@ package optimizer
 import (
 	"math/bits"
 
-	"github.com/azin-lang/Azin/internal/ast"
+	"github.com/azin-lang/Azin/pkg/ast"
 )
 
 func isTrue(expr ast.Expr) bool {

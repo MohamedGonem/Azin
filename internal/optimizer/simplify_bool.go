@@ -1,8 +1,8 @@
 package optimizer
 
 import (
-	"github.com/azin-lang/Azin/internal/ast"
-	"github.com/azin-lang/Azin/internal/token"
+	"github.com/azin-lang/Azin/pkg/ast"
+	"github.com/azin-lang/Azin/pkg/token"
 )
 
 func simplifyBoolean(n *ast.BinaryExpr) ast.Expr {

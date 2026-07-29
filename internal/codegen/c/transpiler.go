@@ -3,9 +3,9 @@ package c
 import (
 	"slices"
 
-	"github.com/azin-lang/Azin/internal/ast"
 	"github.com/azin-lang/Azin/internal/codegen/c/analysis"
-	"github.com/azin-lang/Azin/internal/types"
+	"github.com/azin-lang/Azin/pkg/ast"
+	"github.com/azin-lang/Azin/pkg/types"
 )
 
 type Transpiler struct {

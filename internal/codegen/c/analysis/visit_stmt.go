@@ -1,7 +1,9 @@
 //nolint:unused
 package analysis
 
-import "github.com/azin-lang/Azin/internal/ast"
+import (
+	"github.com/azin-lang/Azin/pkg/ast"
+)
 
 func (a *Analyzer) visitStmt(current string, stmt ast.Stmt) {
 	if stmt == nil {
