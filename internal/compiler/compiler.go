@@ -190,21 +190,34 @@ func compileSingle(file *source.File, outputPath string, opts Options) error {
 }
 
 func compileMulti(files []*source.File, outputPath string, opts Options) error {
+	var allStmts []ast.Stmt
+	var cumOffset uint32
+
+	for i, file := range files {
+		diag := diagnostics.New(file)
+		program, err := parseSource(file, diag)
+		if err != nil {
+			return fmt.Errorf("%s: %w", file.Name(), err)
+		}
+		if i > 0 {
+			cumOffset++
+			ast.AdjustPositions(program, cumOffset)
+		}
+		allStmts = append(allStmts, program.Statements...)
+		cumOffset += file.Len()
+	}
+
 	merged := mergeSources(files)
+	mergedProgram := &ast.Program{Statements: allStmts}
 	diag := diagnostics.New(merged)
 
-	program, err := parseSource(merged, diag)
-	if err != nil {
-		return err
-	}
-
 	analyzer := sema.New(diag)
-	if err := analyzer.Analyze(program); err != nil {
+	if err := analyzer.Analyze(mergedProgram); err != nil {
 		return err
 	}
 
-	optimizer.Optimize(program)
-	cCode, err := transpileToC(program)
+	optimizer.Optimize(mergedProgram)
+	cCode, err := transpileToC(mergedProgram)
 	if err != nil {
 		return err
 	}
