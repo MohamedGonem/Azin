@@ -14,7 +14,8 @@ func (t *Transpiler) emitStatement(
 
 	case *ast.StructStmt,
 		*ast.EnumStmt,
-		*ast.ImportCStmt:
+		*ast.ImportCStmt,
+		*ast.ImportStmt:
 		// emitted elsewhere
 
 	case *ast.FuncStmt:
