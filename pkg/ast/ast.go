@@ -272,6 +272,18 @@ func (i *ImportCStmt) Label() string {
 	return `importc "` + i.Path.Value + `"`
 }
 
+type ImportStmt struct {
+	Token token2.Token
+	Path  *StringLiteral
+}
+
+func (*ImportStmt) stmtNode()              {}
+func (i *ImportStmt) TokenLiteral() string { return i.Token.Kind.String() }
+func (i *ImportStmt) Pos() token2.Position { return i.Token.Position }
+func (i *ImportStmt) Label() string {
+	return `import "` + i.Path.Value + `"`
+}
+
 type ExpressionStmt struct {
 	Token      token2.Token
 	Expression Expr
