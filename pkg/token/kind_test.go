@@ -29,6 +29,7 @@ func TestKindDisplayName(t *testing.T) {
 		{tok.KwStruct, "'struct'"},
 		{tok.KwIs, "'is'"},
 		{tok.KwImportC, "'importC'"},
+		{tok.KwImport, "'import'"},
 		{tok.KwChar, "'char'"},
 		{tok.KwInt, "'int'"},
 		{tok.KwBool, "'bool'"},

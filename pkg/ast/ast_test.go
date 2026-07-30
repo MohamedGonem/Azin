@@ -250,6 +250,16 @@ func TestImportCStmt(t *testing.T) {
 	}
 }
 
+func TestImportStmt(t *testing.T) {
+	i := &ast.ImportStmt{
+		Token: tok(token.KwImport, 0, 6),
+		Path:  &ast.StringLiteral{Value: "fmt"},
+	}
+	if !strings.Contains(i.Label(), "fmt") {
+		t.Errorf("Label missing fmt: %q", i.Label())
+	}
+}
+
 func TestExpressionStmt(t *testing.T) {
 	e := &ast.ExpressionStmt{
 		Token:      tok(token.Identifier, 0, 4),

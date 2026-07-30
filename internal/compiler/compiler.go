@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/azin-lang/Azin/internal/codegen/c"
+	"github.com/azin-lang/Azin/internal/fs"
 	"github.com/azin-lang/Azin/internal/optimizer"
 	"github.com/azin-lang/Azin/pkg/ast"
 	"github.com/azin-lang/Azin/pkg/diagnostics"
@@ -143,71 +144,65 @@ func Compile(files []*source.File, outputPath string, opts Options) error {
 		return fmt.Errorf("no source files to compile")
 	}
 
-	if len(files) == 1 {
-		return compileSingle(files[0], outputPath, opts)
-	}
-
-	return compileMulti(files, outputPath, opts)
+	return compileWithImports(files, outputPath, opts)
 }
 
-func compileSingle(file *source.File, outputPath string, opts Options) error {
-	diag := diagnostics.New(file)
-
-	program, err := parseSource(file, diag)
-	if err != nil {
-		return err
+func compileWithImports(files []*source.File, outputPath string, opts Options) error {
+	if len(files) == 0 {
+		return fmt.Errorf("no source files to compile")
 	}
 
-	analyzer := sema.New(diag)
+	resolver := fs.NewResolver(opts.LibPaths)
 
-	if err := analyzer.Analyze(program); err != nil {
-		return err
-	}
-
-	optimizer.Optimize(program)
-	cCode, err := transpileToC(program)
-	if err != nil {
-		return err
-	}
-
-	if opts.EmitC {
-		return writeCOutput(cCode, outputPath)
-	}
-
-	exeName := resolveExeName(outputPath)
-
-	tmpPath, err := writeToTempFile(cCode)
-	if err != nil {
-		return err
-	}
-	defer func(name string) {
-		if err := os.Remove(name); err != nil {
-			fmt.Printf("warning: failed to remove temp file %s: %v\n", name, err)
-		}
-	}(tmpPath)
-
-	return runCompiler([]string{tmpPath}, exeName, opts)
-}
-
-func compileMulti(files []*source.File, outputPath string, opts Options) error {
 	var allStmts []ast.Stmt
+	var allFiles []*source.File
 	var cumOffset uint32
+	seen := map[string]bool{}
 
-	for i, file := range files {
+	queue := files
+	for len(queue) > 0 {
+		file := queue[0]
+		queue = queue[1:]
+
+		if seen[file.Name()] {
+			continue
+		}
+		seen[file.Name()] = true
+
 		diag := diagnostics.New(file)
 		program, err := parseSource(file, diag)
 		if err != nil {
 			return fmt.Errorf("%s: %w", file.Name(), err)
 		}
-		if i > 0 {
+
+		if len(allFiles) > 0 {
 			cumOffset++
 			ast.AdjustPositions(program, cumOffset)
 		}
+
+		for _, stmt := range program.Statements {
+			if imp, ok := stmt.(*ast.ImportStmt); ok {
+				resolvedPath, err := resolver.Resolve(imp.Path.Value, filepath.Dir(file.Name()))
+				if err != nil {
+					return err
+				}
+				if !seen[resolvedPath] {
+					//nolint:gosec // resolvedPath is cleaned by the resolver
+					data, err := os.ReadFile(resolvedPath)
+					if err != nil {
+						return fmt.Errorf("reading imported file %q: %w", resolvedPath, err)
+					}
+					queue = append(queue, source.New(resolvedPath, data))
+				}
+			}
+		}
+
 		allStmts = append(allStmts, program.Statements...)
+		allFiles = append(allFiles, file)
 		cumOffset += file.Len()
 	}
 
-	merged := mergeSources(files)
+	merged := mergeSources(allFiles)
 	mergedProgram := &ast.Program{Statements: allStmts}
 	diag := diagnostics.New(merged)
 

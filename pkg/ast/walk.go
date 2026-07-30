@@ -69,6 +69,9 @@ func adjustStmt(stmt Stmt, delta uint32) {
 	case *ImportCStmt:
 		s.Token.Position.Offset += delta
 		adjustExpr(s.Path, delta)
+	case *ImportStmt:
+		s.Token.Position.Offset += delta
+		adjustExpr(s.Path, delta)
 	case *ExpressionStmt:
 		s.Token.Position.Offset += delta
 		adjustExpr(s.Expression, delta)

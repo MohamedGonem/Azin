@@ -162,7 +162,7 @@ func (a *Analyzer) verifyResolvedCalls(program *ast.Program) {
 
 	visitStmt = func(stmt ast.Stmt) {
 		switch n := stmt.(type) {
-		case *ast.BadStmt, *ast.ImportCStmt, *ast.StructStmt, *ast.EnumStmt, *ast.StopStmt:
+		case *ast.BadStmt, *ast.ImportCStmt, *ast.ImportStmt, *ast.StructStmt, *ast.EnumStmt, *ast.StopStmt:
 			return
 
 		case *ast.FuncStmt:
