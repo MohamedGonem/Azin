@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/azin-lang/Azin/internal/compiler"
 	"github.com/azin-lang/Azin/internal/fs"
@@ -26,6 +27,7 @@ var (
 	ignoreExtension = flag.Bool("ignore-extension", false, "Ignore source file extension")
 	version         = flag.Bool("version", false, "Print compiler version")
 	emitC           = flag.Bool("emit-c", false, "Generate C source instead of compiling")
+	libPaths        = flag.String("L", "", "Comma-separated library search paths for imports")
 )
 
 func init() {
@@ -96,11 +98,21 @@ func main() {
 		return
 	}
 
+	var libPathsList []string
+	if *libPaths != "" {
+		for _, p := range strings.Split(*libPaths, ",") {
+			if p != "" {
+				libPathsList = append(libPathsList, strings.TrimSpace(p))
+			}
+		}
+	}
+
 	opts := compiler.Options{
 		Output:       *output,
 		EmitC:        *emitC,
 		Optimization: *optimization,
 		Debug:        *debug,
+		LibPaths:     libPathsList,
 	}
 
 	err := compiler.Compile(files, *output, opts)
@@ -122,6 +134,7 @@ func printDebug() {
 	fmt.Printf("Print tokens: %t\n", *printTokens)
 	fmt.Printf("Output: %q\n", *output)
 	fmt.Printf("Emit C: %t\n", *emitC)
+	fmt.Printf("Lib paths: %q\n", *libPaths)
 }
 
 func mustReadSource(filename string) []byte {
