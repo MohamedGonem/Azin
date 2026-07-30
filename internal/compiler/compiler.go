@@ -152,7 +152,11 @@ func compileWithImports(files []*source.File, outputPath string, opts Options) e
 		return fmt.Errorf("no source files to compile")
 	}
 
-	resolver := fs.NewResolver(opts.LibPaths)
+	searchPaths := opts.LibPaths
+	if len(searchPaths) == 0 {
+		searchPaths = []string{"."}
+	}
+	resolver := fs.NewResolver(searchPaths)
 
 	var allStmts []ast.Stmt
 	var allFiles []*source.File
