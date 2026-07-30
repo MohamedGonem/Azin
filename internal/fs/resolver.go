@@ -15,14 +15,14 @@ func NewResolver(searchPaths []string) *Resolver {
 	return &Resolver{searchPaths: searchPaths}
 }
 
-func (r *Resolver) Resolve(importPath string, fromDir string) (string, error) {
+func (r *Resolver) Resolve(importPath, fromDir string) (string, error) {
 	if strings.HasPrefix(importPath, "./") || strings.HasPrefix(importPath, "../") {
 		return r.resolveRelative(importPath, fromDir)
 	}
 	return r.resolveSearch(importPath)
 }
 
-func (r *Resolver) resolveRelative(importPath string, fromDir string) (string, error) {
+func (r *Resolver) resolveRelative(importPath, fromDir string) (string, error) {
 	candidate := filepath.Clean(filepath.Join(fromDir, importPath))
 	if !strings.HasSuffix(candidate, SourceExtension) {
 		candidate += SourceExtension
