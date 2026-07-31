@@ -663,7 +663,6 @@ func (a *Analyzer) visitStatement(stmt ast.Stmt) {
 		cond := a.inferExprType(n.Condition)
 		if !types2.IsAssignable(cond, types2.BoolType()) {
 			a.errorf(n.Condition, "while condition must be bool, got %s", cond.Name)
-			cond = types2.ErrorType()
 		}
 
 		for _, stmt := range n.Body {
