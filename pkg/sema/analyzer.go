@@ -520,7 +520,7 @@ func (a *Analyzer) visitStatement(stmt ast.Stmt) {
 				continue
 			}
 
-			if param.SemaType == nil || param.SemaType.IsUnknown() {
+			if !param.SemaType.IsKnown() {
 				a.errorf(param.SynType, "internal compiler error: parameter type is null or not inferred")
 				param.SemaType = types2.ErrorType()
 			}
@@ -533,7 +533,7 @@ func (a *Analyzer) visitStatement(stmt ast.Stmt) {
 			})
 		}
 
-		if n.SemaReturnType == nil || n.SemaReturnType.IsUnknown() {
+		if !n.SemaReturnType.IsKnown() {
 			a.inferFunctionReturnType(n)
 
 			if sym := a.lookupFunctionSymbol(n); sym != nil {
