@@ -133,6 +133,8 @@ func (k Kind) DisplayName() string {
 		return "'importC'"
 	case KwImport:
 		return "'import'"
+	case KwWhile:
+		return "'while'"
 	case KwEnum:
 		return "'enum'"
 	case KwDefer:
