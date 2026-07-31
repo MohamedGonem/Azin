@@ -485,7 +485,7 @@ func (p *Parser) parseWhile() ast.Stmt {
 	tok := p.advance()
 	condition := p.parseExpression(PrecLowest)
 
-	p.expect(token.KwDo, "after while condition")
+	p.expect(token.KwLoop, "after while condition")
 	body := p.parseBlock(token.KwEnd)
 
 	p.expect(token.KwEnd, "to close while")

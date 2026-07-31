@@ -280,7 +280,7 @@ end
 			input: `
 fn main: int do
 	var mut x: int = 0
-	while x < 10 do
+	while x < 10 loop
 		x = x + 1
 	end
 	return x

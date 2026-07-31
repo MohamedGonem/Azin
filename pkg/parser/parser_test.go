@@ -149,7 +149,7 @@ func TestParserIfElse(t *testing.T) {
 
 func TestParserWhile(t *testing.T) {
 	program, diag := parseProgram(t, `
-		while true do
+		while true loop
 			return 1
 		end
 	`)

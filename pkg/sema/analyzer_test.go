@@ -82,7 +82,7 @@ end`
 func TestSemanticWhileLoopConditionTypeMismatch(t *testing.T) {
 	input := `fn main: int do
 		var mut x: int = 0;
-		while x do
+		while x loop
 			x = x + 1;
 		end
 		return x;
@@ -221,7 +221,7 @@ func TestSemanticWhileLoop(t *testing.T) {
 	input := `
 	fn main: int do
 		var mut x: int = 0;
-		while x < 10 do
+		while x < 10 loop
 			x = x + 1;
 		end
 		return x;
@@ -232,7 +232,7 @@ func TestSemanticWhileLoop(t *testing.T) {
 func TestSemanticWhileLoopBreak(t *testing.T) {
 	input := `fn main: int do
 		var mut x: int = 0
-		while x < 10 do
+		while x < 10 loop
 			stop
 		end
 
@@ -375,7 +375,7 @@ end`
 func TestSemanticUnusedVarInWhileLoop(t *testing.T) {
 	input := `fn main: int do
     var mut x: int = 0;
-    while x < 10 do
+    while x < 10 loop
 				var y: int = 42;
         x = x + 1;
     end
@@ -396,7 +396,7 @@ end`
 func TestSemanticUsedVarInWhileLoop(t *testing.T) {
 	input := `fn main: int do
 		var mut x: int = 0;
-		while x < 10 do
+		while x < 10 loop
 			var mut y: int = 42;
 			x = x + y + 1;
 		end
