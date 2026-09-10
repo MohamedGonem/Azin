@@ -32,9 +32,7 @@ const (
 	KwElse    // kw_else
 	KwStruct  // kw_struct
 	KwIs      // kw_is
-	KwImportC // kw_importc
-	KwImport  // kw_import
-	KwWhile   // kw_while
+	KwImportC // kw_import
 	KwLoop    // kw_loop
 	KwStop    // kw_stop
 	KwDefer   // kw_defer
@@ -131,10 +129,6 @@ func (k Kind) DisplayName() string {
 		return "'is'"
 	case KwImportC:
 		return "'importC'"
-	case KwImport:
-		return "'import'"
-	case KwWhile:
-		return "'while'"
 	case KwEnum:
 		return "'enum'"
 	case KwDefer:

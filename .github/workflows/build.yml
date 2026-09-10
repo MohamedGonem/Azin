@@ -38,7 +38,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go: ["stable"]
+        go: [ stable ]
 
     steps:
       - uses: actions/checkout@v7

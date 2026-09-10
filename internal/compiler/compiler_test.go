@@ -65,7 +65,7 @@ end
 			file := writeSource(t, dir, "test.az", tt.source)
 			out := filepath.Join(dir, "output.c")
 			opts := compiler.Options{Output: out, EmitC: true}
-			if err := compiler.Compile([]*source.File{file}, out, opts); err != nil {
+			if err := compiler.Compile(file, out, opts); err != nil {
 				t.Fatalf("Compile() failed: %v", err)
 			}
 			got := readOutput(t, out)
@@ -92,7 +92,7 @@ end
 `)
 
 	opts := compiler.Options{EmitC: true}
-	if err := compiler.Compile([]*source.File{file}, "", opts); err != nil {
+	if err := compiler.Compile(file, "", opts); err != nil {
 		t.Fatalf("Compile() failed: %v", err)
 	}
 
@@ -102,127 +102,13 @@ end
 	}
 }
 
-func TestCompileMultiFile(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-
-	fileA := writeSource(t, dir, "a.az", `
-fn greet: int do
-    return 42
-end
-`)
-
-	fileB := writeSource(t, dir, "b.az", `
-fn main: int do
-    return greet()
-end
-`)
-
-	out := filepath.Join(dir, "output.c")
-	opts := compiler.Options{Output: out, EmitC: true}
-	if err := compiler.Compile([]*source.File{fileA, fileB}, out, opts); err != nil {
-		t.Fatalf("Compile() failed: %v", err)
-	}
-
-	got := readOutput(t, out)
-	if got == "" {
-		t.Fatal("generated C source is empty")
-	}
-
-	if !strings.Contains(got, "greet") {
-		t.Fatalf("generated output does not contain 'greet'\n\n%s", got)
-	}
-	if !strings.Contains(got, "main") {
-		t.Fatalf("generated output does not contain 'main'\n\n%s", got)
-	}
-}
-
-func TestCompileWithImport(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-
-	lib := filepath.Join(dir, "lib")
-	if err := os.Mkdir(lib, 0o755); err != nil {
-		t.Fatal(err)
-	}
-
-	writeSource(t, lib, "helper.az", `
-fn greet: int do
-    return 42
-end
-`)
-
-	mainFile := writeSource(t, dir, "main.az", `
-import "helper"
-
-fn main: int do
-    return greet()
-end
-`)
-
-	out := filepath.Join(dir, "output.c")
-	opts := compiler.Options{Output: out, EmitC: true, LibPaths: []string{lib}}
-	if err := compiler.Compile([]*source.File{mainFile}, out, opts); err != nil {
-		t.Fatalf("Compile() failed: %v", err)
-	}
-
-	got := readOutput(t, out)
-	if got == "" {
-		t.Fatal("generated C source is empty")
-	}
-
-	if !strings.Contains(got, "greet") {
-		t.Fatalf("generated output does not contain 'greet'\n\n%s", got)
-	}
-	if !strings.Contains(got, "main") {
-		t.Fatalf("generated output does not contain 'main'\n\n%s", got)
-	}
-}
-
-func TestCompileWithImportRelative(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-
-	writeSource(t, dir, "helper.az", `
-fn greet: int do
-    return 42
-end
-`)
-
-	mainFile := writeSource(t, dir, "main.az", `
-import "./helper"
-
-fn main: int do
-    return greet()
-end
-`)
-
-	out := filepath.Join(dir, "output.c")
-	opts := compiler.Options{Output: out, EmitC: true}
-	if err := compiler.Compile([]*source.File{mainFile}, out, opts); err != nil {
-		t.Fatalf("Compile() failed: %v", err)
-	}
-
-	got := readOutput(t, out)
-	if got == "" {
-		t.Fatal("generated C source is empty")
-	}
-
-	if !strings.Contains(got, "greet") {
-		t.Fatalf("generated output does not contain 'greet'\n\n%s", got)
-	}
-	if !strings.Contains(got, "main") {
-		t.Fatalf("generated output does not contain 'main'\n\n%s", got)
-	}
-}
-
 func TestCompileEmptyProgram(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	file := writeSource(t, dir, "empty.az", "")
 	out := filepath.Join(dir, "empty.c")
 	opts := compiler.Options{Output: out, EmitC: true}
-	if err := compiler.Compile([]*source.File{file}, out, opts); err != nil {
+	if err := compiler.Compile(file, out, opts); err != nil {
 		t.Fatalf("Compile() failed: %v", err)
 	}
 	got := readOutput(t, out)

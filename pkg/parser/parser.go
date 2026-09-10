@@ -219,7 +219,7 @@ func isBuiltinType(kind token2.Kind) bool {
 func isSyncPoint(kind token2.Kind) bool {
 	switch kind {
 	case token2.KwFn, token2.KwStruct, token2.KwEnum, token2.KwVar, token2.KwIf, token2.KwLoop,
-		token2.KwReturn, token2.KwElse, token2.KwImportC, token2.KwImport, token2.KwDefer, token2.KwEnd:
+		token2.KwReturn, token2.KwElse, token2.KwImportC, token2.KwDefer, token2.KwEnd:
 		return true
 	default:
 		return false

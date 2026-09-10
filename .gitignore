@@ -213,13 +213,13 @@ $RECYCLE.BIN/
 
 # End of https://www.toptal.com/developers/gitignore/api/go,goland+all,visualstudiocode,linux,windows,macos
 
-
 azin_old/
 /build/
-**/azc
+
 *.sum
-**/output
-**/main
+azc
+output
+main
 !go.sum
 CONVERSATION.md
 test.txt

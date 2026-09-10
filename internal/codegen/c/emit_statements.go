@@ -14,8 +14,7 @@ func (t *Transpiler) emitStatement(
 
 	case *ast.StructStmt,
 		*ast.EnumStmt,
-		*ast.ImportCStmt,
-		*ast.ImportStmt:
+		*ast.ImportCStmt:
 		// emitted elsewhere
 
 	case *ast.FuncStmt:
@@ -60,9 +59,6 @@ func (t *Transpiler) emitStatement(
 
 	case *ast.IfStmt:
 		t.emitIf(n)
-
-	case *ast.WhileStmt:
-		t.emitWhile(n)
 
 	case *ast.LoopStmt:
 		t.emitLoop(n)
@@ -174,27 +170,6 @@ func (t *Transpiler) emitIf(
 	}
 
 	t.newline()
-}
-
-func (t *Transpiler) emitWhile(
-	stmt *ast.WhileStmt,
-) {
-	t.indentLine()
-
-	t.write("while (")
-
-	t.emitExpression(
-		stmt.Condition,
-	)
-
-	t.write(") {\n")
-
-	t.emitBlock(
-		stmt.Body,
-	)
-
-	t.indentLine()
-	t.write("}\n")
 }
 
 func (t *Transpiler) emitLoop(

@@ -5,5 +5,4 @@ type Options struct {
 	EmitC        bool
 	Optimization string
 	Debug        bool
-	LibPaths     []string
 }

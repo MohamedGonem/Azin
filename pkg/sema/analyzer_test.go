@@ -79,17 +79,6 @@ end`
 	_ = mustHaveError(t, input)
 }
 
-func TestSemanticWhileLoopConditionTypeMismatch(t *testing.T) {
-	input := `fn main: int do
-		var mut x: int = 0;
-		while x loop
-			x = x + 1;
-		end
-		return x;
-	end`
-	_ = mustHaveError(t, input)
-}
-
 func TestSemanticImmutableAssign(t *testing.T) {
 	input := `fn main: int do
     var x: int = 42;
@@ -214,30 +203,6 @@ func TestSemanticIfElse(t *testing.T) {
     end
     return x;
 end`
-	validProgram(t, input)
-}
-
-func TestSemanticWhileLoop(t *testing.T) {
-	input := `
-	fn main: int do
-		var mut x: int = 0;
-		while x < 10 loop
-			x = x + 1;
-		end
-		return x;
-	end`
-	validProgram(t, input)
-}
-
-func TestSemanticWhileLoopBreak(t *testing.T) {
-	input := `fn main: int do
-		var mut x: int = 0
-		while x < 10 loop
-			stop
-		end
-
-		return x
-	end`
 	validProgram(t, input)
 }
 
@@ -372,18 +337,6 @@ end`
 	mustNotHaveWarning(t, input)
 }
 
-func TestSemanticUnusedVarInWhileLoop(t *testing.T) {
-	input := `fn main: int do
-    var mut x: int = 0;
-    while x < 10 loop
-				var y: int = 42;
-        x = x + 1;
-    end
-    return 0;
-end`
-	mustHaveWarning(t, input, "unused variable: y")
-}
-
 func TestSemanticUnusedVarInLoop(t *testing.T) {
 	input := `fn main: int do
     loop
@@ -391,18 +344,6 @@ func TestSemanticUnusedVarInLoop(t *testing.T) {
     end
 end`
 	mustHaveWarning(t, input, "unused variable: x")
-}
-
-func TestSemanticUsedVarInWhileLoop(t *testing.T) {
-	input := `fn main: int do
-		var mut x: int = 0;
-		while x < 10 loop
-			var mut y: int = 42;
-			x = x + y + 1;
-		end
-		return x;
-	end`
-	mustNotHaveWarning(t, input)
 }
 
 func TestSemanticUsedVarInLoop(t *testing.T) {

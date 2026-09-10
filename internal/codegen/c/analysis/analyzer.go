@@ -20,7 +20,6 @@ func (a *Analyzer) Analyze(program *ast.Program) {
 	}
 	a.CollectFunctions(program)
 	a.CollectTypes(program)
-	a.CollectImports(program)
 
 	if a.HasErrors() {
 		return

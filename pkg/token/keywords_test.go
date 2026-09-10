@@ -25,10 +25,8 @@ func TestKeywordsContainAllRegistered(t *testing.T) {
 		"else":    tok.KwElse,
 		"struct":  tok.KwStruct,
 		"is":      tok.KwIs,
-		"import":  tok.KwImport,
 		"importc": tok.KwImportC,
 		"loop":    tok.KwLoop,
-		"while":   tok.KwWhile,
 		"stop":    tok.KwStop,
 		"null":    tok.KwNull,
 		"enum":    tok.KwEnum,
@@ -53,7 +51,7 @@ func TestKeywordsNoExtraEntries(t *testing.T) {
 		"return": true, "end": true, "char": true, "int": true,
 		"bool": true, "unit": true, "string": true, "float": true,
 		"if": true, "then": true, "else": true, "struct": true,
-		"is": true, "import": true, "importc": true, "loop": true, "while": true, "stop": true,
+		"is": true, "importc": true, "loop": true, "stop": true,
 		"null": true, "enum": true, "defer": true,
 	}
 

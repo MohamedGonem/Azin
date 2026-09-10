@@ -42,7 +42,7 @@ func (t *Transpiler) emitStruct(
 		typ := emitType(field.SemaType)
 
 		// Convert to a pointer if it creates a cycle
-		if field.SynType != nil && t.isCyclicField(s.Name.Value, field.SynType.Value) {
+		if t.isCyclicField(s.Name.Value, field.SynType.Value) {
 			typ += "*"
 		}
 
