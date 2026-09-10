@@ -29,7 +29,11 @@ if (-not (Get-Command "go" -ErrorAction SilentlyContinue)) {
     exit 1
 }
 
-$IsWin = $IsWindows -or ($env:OS -like "*Windows*")
+if ($PSVersionTable.PSVersion.Major -ge 6) {
+    $IsWin = $IsWindows
+} else {
+    $IsWin = $env:OS -eq "Windows_NT"
+}
 $BinaryName = if ($IsWin) { "azc.exe" } else { "azc" }
 
 $FullOutputDir = Join-Path $RepoRoot $OutputDir

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/azin-lang/Azin/internal/codegen/c"
+	"github.com/azin-lang/Azin/internal/fs"
 	"github.com/azin-lang/Azin/internal/optimizer"
 	"github.com/azin-lang/Azin/pkg/ast"
 	"github.com/azin-lang/Azin/pkg/diagnostics"
@@ -47,50 +48,37 @@ func msvcOptimization(opt string) string {
 	}
 }
 
-func runMSVC(cl, sourcePath, exeName string, opts Options) error {
+func runMSVC(cl string, sources []string, exeName string, opts Options) error {
 	opt := msvcOptimization(opts.Optimization)
+	args := append([]string{"/nologo", "/std:c11", opt, "/Fe:" + exeName}, sources...)
 
 	return runCompilerCommand(
 		cl,
-		[]string{
-			"/nologo",
-			"/std:c11",
-			opt,
-			"/Fe:" + exeName,
-			sourcePath,
-		},
+		args,
 		"MSVC",
 		exeName,
 	)
 }
 
-func runClang(clang, sourcePath, exeName string, opts Options) error {
+func runClang(clang string, sources []string, exeName string, opts Options) error {
+	args := append([]string{"-std=c11", "-O" + opts.Optimization}, sources...)
+	args = append(args, "-o", exeName, "-lm")
+
 	return runCompilerCommand(
 		clang,
-		[]string{
-			"-std=c11",
-			"-O" + opts.Optimization,
-			sourcePath,
-			"-o",
-			exeName,
-			"-lm",
-		},
+		args,
 		"Clang",
 		exeName,
 	)
 }
 
-func runGCC(gcc, sourcePath, exeName string, opts Options) error {
+func runGCC(gcc string, sources []string, exeName string, opts Options) error {
+	args := append([]string{"-std=c11", "-O" + opts.Optimization}, sources...)
+	args = append(args, "-o", exeName, "-lm")
+
 	return runCompilerCommand(
 		gcc,
-		[]string{
-			"-std=c11",
-			"-O" + opts.Optimization,
-			sourcePath,
-			"-o",
-			exeName,
-			"-lm",
-		},
+		args,
 		"GCC",
 		exeName,
 	)
@@ -98,10 +86,10 @@ func runGCC(gcc, sourcePath, exeName string, opts Options) error {
 
 type compiler struct {
 	name string
-	run  func(string, string, string, Options) error
+	run  func(string, []string, string, Options) error
 }
 
-func runCompiler(sourcePath, exeName string, opts Options) error {
+func runCompiler(sources []string, exeName string, opts Options) error {
 	var compilers []compiler
 
 	switch runtime.GOOS {
@@ -127,7 +115,7 @@ func runCompiler(sourcePath, exeName string, opts Options) error {
 
 	for _, c := range compilers {
 		if path, err := exec.LookPath(c.name); err == nil {
-			return c.run(path, sourcePath, exeName, opts)
+			return c.run(path, sources, exeName, opts)
 		}
 	}
 
@@ -150,23 +138,85 @@ func writeCOutput(code, output string) error {
 	return nil
 }
 
-// Compile compiles the given source file to a C executable.
-func Compile(file *source.File, outputPath string, opts Options) error {
-	diag := diagnostics.New(file)
-
-	program, err := parseSource(file, diag)
-	if err != nil {
-		return err
+// Compile compiles the given source files to a C executable.
+func Compile(files []*source.File, outputPath string, opts Options) error {
+	if len(files) == 0 {
+		return fmt.Errorf("no source files to compile")
 	}
+
+	return compileWithImports(files, outputPath, opts)
+}
+
+func compileWithImports(files []*source.File, outputPath string, opts Options) error {
+	if len(files) == 0 {
+		return fmt.Errorf("no source files to compile")
+	}
+
+	searchPaths := opts.LibPaths
+	if len(searchPaths) == 0 {
+		searchPaths = []string{"."}
+	}
+	resolver := fs.NewResolver(searchPaths)
+
+	var allStmts []ast.Stmt
+	var allFiles []*source.File
+	var cumOffset uint32
+	seen := map[string]bool{}
+
+	queue := files
+	for len(queue) > 0 {
+		file := queue[0]
+		queue = queue[1:]
+
+		if seen[file.Name()] {
+			continue
+		}
+		seen[file.Name()] = true
+
+		diag := diagnostics.New(file)
+		program, err := parseSource(file, diag)
+		if err != nil {
+			return fmt.Errorf("%s: %w", file.Name(), err)
+		}
+
+		if len(allFiles) > 0 {
+			cumOffset++
+			ast.AdjustPositions(program, cumOffset)
+		}
+
+		for _, stmt := range program.Statements {
+			if imp, ok := stmt.(*ast.ImportStmt); ok {
+				resolvedPath, err := resolver.Resolve(imp.Path.Value, filepath.Dir(file.Name()))
+				if err != nil {
+					return err
+				}
+				if !seen[resolvedPath] {
+					//nolint:gosec // resolvedPath is cleaned by the resolver
+					data, err := os.ReadFile(resolvedPath)
+					if err != nil {
+						return fmt.Errorf("reading imported file %q: %w", resolvedPath, err)
+					}
+					queue = append(queue, source.New(resolvedPath, data))
+				}
+			}
+		}
+
+		allStmts = append(allStmts, program.Statements...)
+		allFiles = append(allFiles, file)
+		cumOffset += file.Len()
+	}
+
+	merged := mergeSources(allFiles)
+	mergedProgram := &ast.Program{Statements: allStmts}
+	diag := diagnostics.New(merged)
 
 	analyzer := sema.New(diag)
-
-	if err := analyzer.Analyze(program); err != nil {
+	if err := analyzer.Analyze(mergedProgram); err != nil {
 		return err
 	}
 
-	optimizer.Optimize(program)
-	cCode, err := transpileToC(program)
+	optimizer.Optimize(mergedProgram)
+	cCode, err := transpileToC(mergedProgram)
 	if err != nil {
 		return err
 	}
@@ -176,18 +226,39 @@ func Compile(file *source.File, outputPath string, opts Options) error {
 	}
 
 	exeName := resolveExeName(outputPath)
-
 	tmpPath, err := writeToTempFile(cCode)
 	if err != nil {
 		return err
 	}
-	defer func(name string) {
-		if err := os.Remove(name); err != nil {
-			fmt.Printf("warning: failed to remove temp file %s: %v\n", name, err)
-		}
-	}(tmpPath)
+	defer func() {
+		os.Remove(tmpPath)
+	}()
 
-	return runCompiler(tmpPath, exeName, opts)
+	return runCompiler([]string{tmpPath}, exeName, opts)
+}
+
+func mergeSources(files []*source.File) *source.File {
+	if len(files) == 1 {
+		return files[0]
+	}
+
+	var names []string
+	var totalLen int
+	for _, f := range files {
+		names = append(names, f.Name())
+		totalLen += int(f.Len())
+	}
+
+	text := make([]byte, 0, totalLen+len(files))
+	for i, f := range files {
+		if i > 0 {
+			text = append(text, '\n')
+		}
+		text = append(text, f.Slice(0, f.Len())...)
+	}
+
+	displayName := strings.Join(names, " + ")
+	return source.New(displayName, text)
 }
 
 func parseSource(file *source.File, diag *diagnostics.Engine) (*ast.Program, error) {

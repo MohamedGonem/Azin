@@ -162,7 +162,7 @@ func (a *Analyzer) verifyResolvedCalls(program *ast.Program) {
 
 	visitStmt = func(stmt ast.Stmt) {
 		switch n := stmt.(type) {
-		case *ast.BadStmt, *ast.ImportCStmt, *ast.StructStmt, *ast.EnumStmt, *ast.StopStmt:
+		case *ast.BadStmt, *ast.ImportCStmt, *ast.ImportStmt, *ast.StructStmt, *ast.EnumStmt, *ast.StopStmt:
 			return
 
 		case *ast.FuncStmt:
@@ -228,7 +228,7 @@ func (a *Analyzer) resolveCallOverload(name string, argTypes []*types2.TypeInfo)
 				a.errorf(overload.Function.Params[i].SynType, "internal compiler error: parameter type not inferred")
 			}
 
-			if got == nil || want == nil || !types2.IsAssignable(got, want) {
+			if !types2.IsAssignable(got, want) {
 				match = false
 				break
 			}
@@ -247,21 +247,98 @@ func (a *Analyzer) resolveCallOverload(name string, argTypes []*types2.TypeInfo)
 }
 
 func (a *Analyzer) errorf(node ast.Node, format string, args ...any) {
+	pos, length := sourceSpan(node)
 	a.diag.ReportError(
-		node.Pos(),
-		len(node.TokenLiteral()),
+		pos,
+		int(length),
 		format,
 		args...,
 	)
 }
 
 func (a *Analyzer) warningf(node ast.Node, format string, args ...any) {
+	pos, length := sourceSpan(node)
 	a.diag.ReportWarning(
-		node.Pos(),
-		len(node.TokenLiteral()),
+		pos,
+		int(length),
 		format,
 		args...,
 	)
+}
+
+func sourceSpan(n ast.Node) (pos token.Position, length uint32) {
+	pos = n.Pos()
+	switch node := n.(type) {
+	case *ast.Identifier:
+		return pos, node.Token.Length
+
+	case *ast.IntegerLiteral:
+		return pos, node.Token.Length
+	case *ast.FloatLiteral:
+		return pos, node.Token.Length
+	case *ast.StringLiteral:
+		return pos, node.Token.Length
+	case *ast.CharacterLiteral:
+		return pos, node.Token.Length
+	case *ast.BooleanLiteral:
+		return pos, node.Token.Length
+	case *ast.BinaryExpr:
+		leftEnd := node.Left.Pos().Offset + spanLen(node.Left)
+		rightEnd := node.Right.Pos().Offset + spanLen(node.Right)
+		if rightEnd > leftEnd {
+			return pos, rightEnd - pos.Offset
+		}
+		return pos, leftEnd - pos.Offset
+	case *ast.MemberExpr:
+		objEnd := node.Object.Pos().Offset + spanLen(node.Object)
+		propEnd := node.Property.Token.Position.Offset + node.Property.Token.Length
+		if objEnd > propEnd {
+			return pos, objEnd - pos.Offset
+		}
+		return pos, propEnd - pos.Offset
+	case *ast.CallExpr:
+		end := node.Callee.Pos().Offset + spanLen(node.Callee)
+		for _, arg := range node.Args {
+			argEnd := arg.Pos().Offset + spanLen(arg)
+			if argEnd > end {
+				end = argEnd
+			}
+		}
+		return pos, end - pos.Offset
+	case *ast.VarStmt:
+		end := node.Name.Token.Position.Offset + node.Name.Token.Length
+		if node.SynType != nil {
+			tEnd := node.SynType.Token.Position.Offset + node.SynType.Token.Length
+			if tEnd > end {
+				end = tEnd
+			}
+		}
+		if node.Value != nil {
+			vEnd := node.Value.Pos().Offset + spanLen(node.Value)
+			if vEnd > end {
+				end = vEnd
+			}
+		}
+		return pos, end - pos.Offset
+	case *ast.AssignmentStmt:
+		end := node.Left.Pos().Offset + spanLen(node.Left)
+		vEnd := node.Value.Pos().Offset + spanLen(node.Value)
+		if vEnd > end {
+			end = vEnd
+		}
+		return pos, end - pos.Offset
+	}
+
+	l := len(n.TokenLiteral())
+	if l > 0 {
+		length = uint32(l) //nolint:gosec
+	}
+	return
+}
+
+func spanLen(n ast.Node) uint32 {
+	_, length := sourceSpan(n)
+	return length
 }
 
 // Analyze performs sema analysis on the given AST program.
@@ -325,10 +402,9 @@ func (a *Analyzer) registerTopLevelSymbols(program *ast.Program) {
 		case *ast.StructStmt:
 			// Resolve the types of the fields in the struct.
 			for _, field := range n.Fields {
-				fieldType := a.lookupType(field.SynType.Value)
-				if fieldType == nil {
+				fieldType, err := a.lookupType(field.SynType.Value)
+				if err != nil {
 					a.errorf(field.SynType, "unknown type: %s", field.SynType.Value)
-					fieldType = types2.ErrorType()
 				}
 
 				// Store the TypeInfo in the field node for later phase.
@@ -338,11 +414,12 @@ func (a *Analyzer) registerTopLevelSymbols(program *ast.Program) {
 		case *ast.FuncStmt:
 			returnType := types2.UnknownType()
 			if n.SynReturnType != nil {
-				returnType = a.lookupType(n.SynReturnType.Value)
-				if returnType == nil {
+				foundType, err := a.lookupType(n.SynReturnType.Value)
+				if err != nil {
 					a.errorf(n.SynReturnType, "unknown return type: %s", n.SynReturnType.Value)
-					returnType = types2.ErrorType()
 				}
+
+				returnType = foundType
 			}
 
 			a.declareFunction(&Symbol{
@@ -354,12 +431,14 @@ func (a *Analyzer) registerTopLevelSymbols(program *ast.Program) {
 
 			for _, param := range n.Params {
 				if param.SynType == nil {
+					a.errorf(param.Name, "parameter '%s' must have a type", param.Name.Value)
+					param.SemaType = types2.ErrorType()
 					continue
 				}
-				paramType := a.lookupType(param.SynType.Value)
-				if paramType == nil {
+
+				paramType, err := a.lookupType(param.SynType.Value)
+				if err != nil {
 					a.errorf(param.SynType, "unknown parameter type: %s", param.SynType.Value)
-					paramType = types2.ErrorType()
 				}
 
 				// Store the TypeInfo in the parameter node for later phase.
@@ -371,26 +450,25 @@ func (a *Analyzer) registerTopLevelSymbols(program *ast.Program) {
 	}
 }
 
-func (a *Analyzer) lookupType(name string) *types2.TypeInfo {
+func (a *Analyzer) lookupType(name string) (*types2.TypeInfo, error) {
 	if primitive := types2.GetPrimitiveTypeByName(name); primitive != nil {
-		return primitive
+		return primitive, nil
 	}
 
 	sym := a.lookup(name)
 	if sym == nil {
-		return nil
+		return types2.ErrorType(), fmt.Errorf("unknown type: %s", name)
 	}
 
 	switch sym.Kind {
 	case SymbolStruct, SymbolEnum:
-		return types2.NominalType(sym.Name)
+		return types2.NominalType(sym.Name), nil
 	default:
 		if sym.Type != nil {
-			return sym.Type
+			return sym.Type, nil
 		}
 
-		fmt.Println("internal compiler error: symbol has no type info:", sym.Name)
-		return nil
+		return types2.ErrorType(), fmt.Errorf("internal compiler error: symbol has no type info: %s", sym.Name)
 	}
 }
 
@@ -442,7 +520,7 @@ func (a *Analyzer) visitStatement(stmt ast.Stmt) {
 				continue
 			}
 
-			if param.SemaType == nil || param.SemaType.IsUnknown() {
+			if !param.SemaType.IsKnown() {
 				a.errorf(param.SynType, "internal compiler error: parameter type is null or not inferred")
 				param.SemaType = types2.ErrorType()
 			}
@@ -455,7 +533,7 @@ func (a *Analyzer) visitStatement(stmt ast.Stmt) {
 			})
 		}
 
-		if n.SemaReturnType == nil || n.SemaReturnType.IsUnknown() {
+		if !n.SemaReturnType.IsKnown() {
 			a.inferFunctionReturnType(n)
 
 			if sym := a.lookupFunctionSymbol(n); sym != nil {
@@ -518,11 +596,12 @@ func (a *Analyzer) visitStatement(stmt ast.Stmt) {
 
 		varType := types2.UnknownType()
 		if n.SynType != nil {
-			varType = a.lookupType(n.SynType.Value)
-			if varType == nil {
+			foundType, err := a.lookupType(n.SynType.Value)
+			if err != nil {
 				a.errorf(n.SynType, "unknown type: %s", n.SynType.Value)
-				varType = types2.ErrorType()
 			}
+
+			varType = foundType
 		}
 
 		if n.Value != nil {
@@ -575,6 +654,22 @@ func (a *Analyzer) visitStatement(stmt ast.Stmt) {
 		}
 
 		a.popScope()
+
+	case *ast.WhileStmt:
+		a.loopDepth++
+		defer func() { a.loopDepth-- }()
+
+		a.pushScope()
+		defer a.popScope()
+
+		cond := a.inferExprType(n.Condition)
+		if !types2.IsAssignable(cond, types2.BoolType()) {
+			a.errorf(n.Condition, "while condition must be bool, got %s", cond.Name)
+		}
+
+		for _, stmt := range n.Body {
+			a.visitStatement(stmt)
+		}
 
 	case *ast.LoopStmt:
 		a.loopDepth++
@@ -748,8 +843,8 @@ func (a *Analyzer) stmtAllPathsReturn(stmt ast.Stmt) bool {
 }
 
 func (a *Analyzer) inferFunctionReturnType(fn *ast.FuncStmt) {
-	if fn.SemaReturnType != nil && !fn.SemaReturnType.IsUnknown() {
-		// The return type has already been inferred or explicitly specified, so we don't need to infer it again.
+	if fn.SemaReturnType.IsKnown() {
+		// The return type is already known, so we don't need to infer it.
 		return
 	}
 
@@ -766,7 +861,6 @@ func (a *Analyzer) inferFunctionReturnType(fn *ast.FuncStmt) {
 
 	for _, stmt := range fn.Body {
 		if typ := a.findReturnExprType(stmt); typ != nil {
-			fn.SynReturnType = &ast.Identifier{Value: typ.Name}
 			fn.SemaReturnType = typ
 
 			if sym != nil {
@@ -777,7 +871,6 @@ func (a *Analyzer) inferFunctionReturnType(fn *ast.FuncStmt) {
 		}
 	}
 
-	fn.SynReturnType = &ast.Identifier{Value: "unit"}
 	fn.SemaReturnType = types2.UnitType()
 
 	if sym != nil {
@@ -786,16 +879,15 @@ func (a *Analyzer) inferFunctionReturnType(fn *ast.FuncStmt) {
 }
 
 func (a *Analyzer) inferExprType(expr ast.Expr) *types2.TypeInfo {
-	if expr != nil && expr.Type().IsComplete() {
+	if expr != nil && expr.Type().IsKnown() {
 		// Type has already been inferred, so we can return it directly.
 		return expr.Type()
 	}
 
 	switch n := expr.(type) {
 	case *ast.Identifier:
-		resultType := a.lookupType(n.Value)
-		if resultType == nil {
-			resultType = types2.ErrorType()
+		resultType, err := a.lookupType(n.Value)
+		if err != nil {
 			a.errorf(n, "unknown identifier: %s", n.Value)
 		}
 
@@ -817,8 +909,8 @@ func (a *Analyzer) inferExprType(expr ast.Expr) *types2.TypeInfo {
 			return types2.UnknownType()
 		}
 
-		if !sym.Type.IsComplete() {
-			// If the function's return type is not yet inferred, we need to infer it now.
+		if sym.Type.IsUnknown() {
+			// If the function's return type is unknown, we need to infer it now.
 			a.inferFunctionReturnType(sym.Function)
 		}
 
@@ -829,7 +921,7 @@ func (a *Analyzer) inferExprType(expr ast.Expr) *types2.TypeInfo {
 		left := a.inferExprType(n.Left)
 		right := a.inferExprType(n.Right)
 
-		if !left.IsValid() || !right.IsValid() {
+		if left.IsError() || right.IsError() {
 			n.SemaResultType = types2.ErrorType()
 			return types2.ErrorType()
 		}
@@ -896,7 +988,7 @@ func (a *Analyzer) inferExprType(expr ast.Expr) *types2.TypeInfo {
 		}
 
 		objectType := a.inferExprType(n.Object)
-		if !objectType.IsValid() {
+		if objectType.IsError() {
 			n.SemaResultType = types2.ErrorType()
 			return n.SemaResultType
 		}

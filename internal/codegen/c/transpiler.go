@@ -1,7 +1,9 @@
 package c
 
 import (
+	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/azin-lang/Azin/internal/codegen/c/analysis"
 	"github.com/azin-lang/Azin/pkg/ast"
@@ -42,16 +44,26 @@ func (t *Transpiler) Transpile(
 ) (string, error) {
 	t.reset()
 
-	t.analyze(program)
+	if err := t.analyze(program); err != nil {
+		return "", err
+	}
 
 	t.emit(program)
 
 	return t.String(), t.err
 }
 
-func (t *Transpiler) analyze(program *ast.Program) {
+func (t *Transpiler) analyze(program *ast.Program) error {
 	a := analysis.New(t)
 	a.Analyze(program)
+
+	if a.HasErrors() {
+		errs := make([]string, len(a.Errors))
+		for i, err := range a.Errors {
+			errs[i] = err.Error()
+		}
+		return fmt.Errorf("analysis: %s", strings.Join(errs, "; "))
+	}
 
 	for enum := range a.Enums {
 		t.SetEnum(enum)
@@ -69,13 +81,15 @@ func (t *Transpiler) analyze(program *ast.Program) {
 
 			var deps []string
 			for _, f := range s.Fields {
-				if f.SemaType.IsComplete() {
+				if f.SemaType.IsUseable() {
 					deps = append(deps, f.SemaType.Name)
 				}
 			}
 			t.structDeps[s.Name.Value] = deps
 		}
 	}
+
+	return nil
 }
 
 func (t *Transpiler) reset() {

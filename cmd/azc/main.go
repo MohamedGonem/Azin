@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/azin-lang/Azin/internal/compiler"
 	"github.com/azin-lang/Azin/internal/fs"
@@ -21,16 +22,17 @@ var (
 	debug           = flag.Bool("debug", false, "Enable debug output")
 	printTokens     = flag.Bool("print-tokens", false, "Print lexer tokens")
 	printAST        = flag.Bool("print-ast", false, "Print the parsed AST")
-	optimization    = flag.String("O", "0", "Optimization level (0,1,2,3,s,z) (default \"0\")")
+	optimization    = flag.String("O", "0", "Optimization level (0,1,2,3,s,z)")
 	output          = flag.String("o", "", "Output file")
 	ignoreExtension = flag.Bool("ignore-extension", false, "Ignore source file extension")
 	version         = flag.Bool("version", false, "Print compiler version")
 	emitC           = flag.Bool("emit-c", false, "Generate C source instead of compiling")
+	libPaths        = flag.String("L", "", "Comma-separated library search paths for imports")
 )
 
 func init() {
 	flag.Usage = func() {
-		_, _ = fmt.Fprintf(flag.CommandLine.Output(), "Usage: %s [flags] <file>\n\n", os.Args[0])
+		_, _ = fmt.Fprintf(flag.CommandLine.Output(), "Usage: %s [flags] <file...>\n\n", os.Args[0])
 		flag.PrintDefaults()
 	}
 }
@@ -43,7 +45,7 @@ func main() {
 		return
 	}
 
-	if flag.NArg() != 1 {
+	if flag.NArg() < 1 {
 		flag.Usage()
 		os.Exit(1)
 	}
@@ -52,40 +54,57 @@ func main() {
 		printDebug()
 	}
 
-	filename := flag.Arg(0)
-	data := mustReadSource(filename)
-	file := source.New(filename, data)
-
-	diag := diagnostics.New(file)
-	l := lexer.New(file, diag)
-	tokens := l.Tokenize()
-
-	if err := diag.Err(); err != nil {
-		fatal(err)
+	var files []*source.File
+	for _, filename := range flag.Args() {
+		data := mustReadSource(filename)
+		files = append(files, source.New(filename, data))
 	}
 
-	if *printTokens {
-		for _, tok := range tokens {
-			fmt.Println(formatToken(file, tok))
+	if *printTokens || *printAST {
+		if len(files) != 1 {
+			fatal(fmt.Errorf("--print-tokens and --print-ast only support a single input file"))
 		}
-		return
-	}
+		file := files[0]
+		diag := diagnostics.New(file)
+		l := lexer.New(file, diag)
+		tokens := l.Tokenize()
 
-	program, parseErr := parser.Parse(string(file.Slice(0, file.Len())), tokens, diag)
+		if err := diag.Err(); err != nil {
+			fatal(err)
+		}
 
-	if parseErr != nil {
-		fatal(parseErr)
-	}
-
-	if *printAST {
-		if *output != "" {
-			if err := ast.ExportDebugTree(program, *output); err != nil {
-				fatal(err)
+		if *printTokens {
+			for _, tok := range tokens {
+				fmt.Println(formatToken(file, tok))
 			}
-		} else {
-			ast.PrintDebugTree(program)
+			return
+		}
+
+		program, parseErr := parser.Parse(string(file.Slice(0, file.Len())), tokens, diag)
+
+		if parseErr != nil {
+			fatal(parseErr)
+		}
+
+		if *printAST {
+			if *output != "" {
+				if err := ast.ExportDebugTree(program, *output); err != nil {
+					fatal(err)
+				}
+			} else {
+				ast.PrintDebugTree(program)
+			}
 		}
 		return
+	}
+
+	var libPathsList []string
+	if *libPaths != "" {
+		for _, p := range strings.Split(*libPaths, ",") {
+			if p != "" {
+				libPathsList = append(libPathsList, strings.TrimSpace(p))
+			}
+		}
 	}
 
 	opts := compiler.Options{
@@ -93,19 +112,20 @@ func main() {
 		EmitC:        *emitC,
 		Optimization: *optimization,
 		Debug:        *debug,
+		LibPaths:     libPathsList,
 	}
 
-	err := compiler.Compile(file, *output, opts)
+	err := compiler.Compile(files, *output, opts)
 	if err != nil {
 		fatal(err)
 	}
 
-	if err := diag.Err(); err != nil {
-		fatal(err)
-	}
-
-	if *debug {
-		fmt.Printf("Compiled %.2f KiB\n", float64(file.Len())/1024)
+	if *debug && len(files) > 0 {
+		var total uint32
+		for _, f := range files {
+			total += f.Len()
+		}
+		fmt.Printf("Compiled %.2f KiB\n", float64(total)/1024)
 	}
 }
 
@@ -114,6 +134,7 @@ func printDebug() {
 	fmt.Printf("Print tokens: %t\n", *printTokens)
 	fmt.Printf("Output: %q\n", *output)
 	fmt.Printf("Emit C: %t\n", *emitC)
+	fmt.Printf("Lib paths: %q\n", *libPaths)
 }
 
 func mustReadSource(filename string) []byte {

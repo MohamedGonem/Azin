@@ -82,6 +82,23 @@ func (p *Parser) parseImportC() ast.Stmt {
 	}
 }
 
+func (p *Parser) parseImport() ast.Stmt {
+	tok := p.advance()
+
+	if !p.check(token.StringLiteral) {
+		p.reportError(p.peek(), "expected string literal after 'import'")
+		return badStmt(tok)
+	}
+
+	path := p.parseStringLiteral()
+	p.consumeStatementEnd()
+
+	return &ast.ImportStmt{
+		Token: tok,
+		Path:  path,
+	}
+}
+
 func (p *Parser) parseStatement() ast.Stmt {
 	p.skipNewlines()
 
@@ -105,6 +122,10 @@ func (p *Parser) parseStatement() ast.Stmt {
 		stmt = p.parseIf()
 	case p.check(token.KwImportC):
 		stmt = p.parseImportC()
+	case p.check(token.KwImport):
+		stmt = p.parseImport()
+	case p.check(token.KwWhile):
+		stmt = p.parseWhile()
 	case p.check(token.KwLoop):
 		stmt = p.parseLoop()
 	case p.check(token.KwStop):
@@ -457,6 +478,22 @@ func (p *Parser) parseStop() ast.Stmt {
 
 	return &ast.StopStmt{
 		Token: tok,
+	}
+}
+
+func (p *Parser) parseWhile() ast.Stmt {
+	tok := p.advance()
+	condition := p.parseExpression(PrecLowest)
+
+	p.expect(token.KwLoop, "after while condition")
+	body := p.parseBlock(token.KwEnd)
+
+	p.expect(token.KwEnd, "to close while")
+
+	return &ast.WhileStmt{
+		Token:     tok,
+		Condition: condition,
+		Body:      body,
 	}
 }
 

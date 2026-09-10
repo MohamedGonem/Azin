@@ -40,6 +40,14 @@ func (a *Analyzer) CollectTypes(program *ast.Program) {
 	}
 }
 
+func (a *Analyzer) CollectImports(program *ast.Program) {
+	for _, stmt := range program.Statements {
+		if imp, ok := stmt.(*ast.ImportCStmt); ok {
+			a.requireImport(imp.Path.Value)
+		}
+	}
+}
+
 func (a *Analyzer) CollectFunctions(program *ast.Program) {
 	for index, stmt := range program.Statements {
 		fn, ok := stmt.(*ast.FuncStmt)
